@@ -201,21 +201,20 @@ const notifications = () => {
   });
 
   window.addEventListener('resize', () => {
-    document.querySelector("#notification") ?
+    if (document.querySelector("#notification .allNotification")) {
       window.innerWidth <= 625 ?
         document.querySelector("#notification .allNotification").classList.remove("me-3") :
         document.querySelector("#notification .allNotification").classList.add("me-3")
-      : ''
-    document.querySelector("#notification") ?
-      document.querySelector("#notification").style.height = `${window.innerHeight}px` : ''
-
+    }
     window.innerWidth <= 625 ? setisNavbarVisible(true) : setisNavbarVisible(false)
   })
 
   useEffect(() => {
-    window.innerWidth <= 625 ?
-      document.querySelector("#notification .allNotification").classList.remove("me-3") :
-      document.querySelector("#notification .allNotification").classList.add("me-3")
+    if (document.querySelector("#notification .allNotification")) {
+      window.innerWidth <= 625 ?
+        document.querySelector("#notification .allNotification").classList.remove("me-3") :
+        document.querySelector("#notification .allNotification").classList.add("me-3")
+    }
     window.innerWidth <= 625 ? setisNavbarVisible(true) : setisNavbarVisible(false)
   }, [])
 
@@ -223,9 +222,9 @@ const notifications = () => {
 
 
   return (
-    <div className=" overflow-auto h-100" id='notification' >
+    <div className="flex-grow-1 pb-5 mb-5" id='notification'>
 
-      {isNavbarVisible && <Navbar search={() => { }} />}
+      <Navbar search={() => { }} />
 
       <div className={`${isLoaded === true ? "d-none" : ""} contentLoader d-flex justify-content-center mt-5 pt-5`}>
         <ContentLoader
@@ -507,7 +506,7 @@ const notifications = () => {
         <RotatingBorder message="You do not have any notification" />
       </div>
 
-      <div className={` d-flex w-100 justify-content-center  ${allNotification.length === 0 && tempNotification.length === 0 ? 'd-none' : ''}`}>
+      <div className={` empty-state-wrapper d-flex w-100 justify-content-center flex-column align-items-center  ${allNotification.length === 0 && tempNotification.length === 0 ? '' : 'd-none'}`}>
         <div className=" allNotification w-100 rounded-2 my-3 me-3 overflow-hidden p-sm-3 p-2 osahan-post-header" style={{ backgroundColor: "rgba(31, 31, 42, 0.72)" }}>
 
           {/* notifications after refresh  */}

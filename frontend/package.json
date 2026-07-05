@@ -10,7 +10,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@fortawesome/fontawesome-free": "^7.3.0",
     "axios": "^1.7.0",
+    "bootstrap": "^5.3.3",
     "cloudinary": "^2.2.0",
     "express-fileupload": "^1.5.0",
     "file-icon": "^5.1.1",

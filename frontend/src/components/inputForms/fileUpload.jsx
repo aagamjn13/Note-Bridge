@@ -35,7 +35,7 @@ const fileUpload = () => {
     if (localStorage.getItem("folderPath")) {
       path = localStorage.getItem("folderPath").split(",").join("/");
     } else {
-      path = localStorage.getItem("baseFolderPath").split(",").join("/");
+      path = (localStorage.getItem("baseFolderPath") || "MainSection").split(",").join("/");
     }
     const filelist = await listAll(ref(storage, `${value.userId}/${path}`)); //list of all item at this ref
     //creat a json file wih form inputs
@@ -90,7 +90,7 @@ const fileUpload = () => {
         } else {
           formData.append(
             "folderPath",
-            `${localStorage.getItem("baseFolderPath").split(",").join("/")}`
+            `${(localStorage.getItem("baseFolderPath") || "MainSection").split(",").join("/")}`
           );
         }
         setprogress(60); //setting progress

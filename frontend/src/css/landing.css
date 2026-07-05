@@ -1,0 +1,38 @@
+.landing-container {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+.text-primary-contrast {
+  color: var(--text-primary);
+}
+
+.text-secondary-contrast {
+  color: var(--text-secondary);
+}
+
+.bg-card-contrast {
+  background-color: var(--card-bg);
+  border: 1px solid var(--border-color) !important;
+}
+
+.btn-notion {
+  background-color: var(--text-primary);
+  color: var(--bg-primary);
+  border: none;
+  transition: opacity 0.2s ease;
+}
+
+.btn-notion:hover {
+  opacity: 0.85;
+}
+
+.hero-section {
+  animation: fadeIn 0.8s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}

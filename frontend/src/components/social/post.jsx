@@ -31,7 +31,8 @@ const post = () => {
   const [like, setlike] = useState(false)
   const [view, setview] = useState(false)
   const [follow, setfollow] = useState(false)
-
+  const [postSummaries, setPostSummaries] = useState({})
+  const [loadingSummaries, setLoadingSummaries] = useState({})
   useEffect(() => {
     socket.emit("userConnected", `${value.userId}`); //connect to io
 
@@ -733,7 +734,7 @@ const post = () => {
   }, [value.urlPath, about])
 
   return (
-    <div className=" w-100 overflow-auto">
+    <div className="w-100 flex-grow-1">
       <ShareModal url={shareUrl} seturl={setshareUrl} />
 
       <Navbar search={search} />
@@ -1201,7 +1202,70 @@ const post = () => {
                     <i className=" fa-regular fa-share-from-square "></i>
                   </div>
 
+                  {/* AI summarize btn  */}
+                  <div
+                    title="AI Summarize Post"
+                    className="sharePost mx-3 text-info"
+                    style={{ cursor: "pointer", fontSize: "1rem" }}
+                    onClick={async (e) => {
+                      e.preventDefault();
+                      if(postSummaries[about._id]) {
+                         setPostSummaries(prev => ({...prev, [about._id]: null}));
+                         return;
+                      }
+                      setLoadingSummaries(prev => ({...prev, [about._id]: true}));
+                      
+                      // Gather text
+                      let fullText = about.about + "\n\n";
+                      if(notes.length > 0 && notes[index]) {
+                         notes[index].forEach(n => {
+                           if(n.file.desc) fullText += n.file.desc + "\n";
+                         });
+                      }
+                      
+                      try {
+                        const res = await fetch(`${value.host}/api/ai/summarize`, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ text: fullText })
+                        });
+                        const data = await res.json();
+                        if(data.error) {
+                           setPostSummaries(prev => ({...prev, [about._id]: { error: data.message }}));
+                        } else {
+                           setPostSummaries(prev => ({...prev, [about._id]: { summary: data.summary, tags: data.tags }}));
+                        }
+                      } catch (err) {
+                        setPostSummaries(prev => ({...prev, [about._id]: { error: "Failed to summarize post" }}));
+                      } finally {
+                        setLoadingSummaries(prev => ({...prev, [about._id]: false}));
+                      }
+                    }}
+                  >
+                    <i className="fa-solid fa-wand-magic-sparkles"></i>
+                    <span className="ms-2 fs-6">{loadingSummaries[about._id] ? "Loading..." : "Summarize"}</span>
+                  </div>
+
                 </div>
+
+                {/* AI Summary Box */}
+                {postSummaries[about._id] && (
+                  <div className="mx-3 mt-3 p-3 rounded text-start" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', fontSize: '0.9rem' }}>
+                    <div className="d-flex justify-content-between align-items-center mb-2">
+                      <span className="fw-bold" style={{ color: 'var(--accent-color)' }}><i className="fa-solid fa-wand-magic-sparkles"></i> Post Summary</span>
+                    </div>
+                    {postSummaries[about._id].error ? (
+                      <div className="text-danger">{postSummaries[about._id].error}</div>
+                    ) : (
+                      <>
+                        <p className="mb-2" style={{ color: 'var(--text-primary)' }}>{postSummaries[about._id].summary}</p>
+                        <div>
+                          {postSummaries[about._id].tags.map(t => <span key={t} className="badge me-1" style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-secondary)', border: '1px solid var(--border-color)' }}>{t}</span>)}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
 
                 {/* comment section  */}
                 <div
@@ -1249,7 +1313,8 @@ const post = () => {
                       />
                       <button
                         type="submit"
-                        className=" commentSubmit btn rounded-5 "
+                        className="commentSubmit btn rounded-5"
+                        style={{ backgroundColor: 'var(--accent-color)', color: 'white', boxShadow: 'var(--accent-glow)', padding: '5px 15px' }}
                       >
                         Post
                       </button>

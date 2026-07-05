@@ -4,15 +4,21 @@
   }
   
   #Content .formcontrol input {
-    background-color: transparent;
+    background-color: transparent !important;
     border: 0;
-    border-bottom: 2px #fff solid;
+    border-bottom: 2px var(--border-color) solid;
     display: block;
     width: 100%;
     padding: 15px 0;
     font-size: 18px;
-    color: #fff;
+    color: var(--text-primary);
     letter-spacing: 1px;
+  }
+
+  #Content .formcontrol input:-webkit-autofill {
+    -webkit-box-shadow: 0 0 0 1000px transparent inset !important;
+    -webkit-text-fill-color: var(--text-primary) !important;
+    transition: background-color 5000s ease-in-out 0s;
   }
   
   #Content .formcontrol input:focus,
@@ -32,14 +38,14 @@
     display: inline-block;
     font-size: 18px;
     min-width: 5px;
-    color: #fff;
+    color: var(--text-secondary);
     letter-spacing: 2px;
     transition: 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
   }
   
   #Content .formcontrol input:focus+label span,
   #Content .formcontrol input:valid+label span {
-    color: lightblue;
+    color: var(--text-primary);
     transform: translateY(-30px);
   }
 
@@ -55,8 +61,8 @@
     background-color: inherit;
     border-radius: 0.5rem;
     font-weight: 700;
-    color: rgb(238, 255, 212);
-    box-shadow: 0 0 0 2px rgb(238, 255, 212);
+    color: var(--text-primary);
+    box-shadow: 0 0 0 2px var(--text-primary);
     cursor: pointer;
     overflow: hidden;
     transition: all 0.6s cubic-bezier(0.23, 1, 0.32, 1);
@@ -65,7 +71,7 @@
   #Content .animated-button svg {
     position: absolute;
     width: 24px;
-    fill: rgb(238, 255, 212);
+    fill: var(--text-primary);
     z-index: 9;
     transition: all 0.8s cubic-bezier(0.23, 1, 0.32, 1);
   }
@@ -85,7 +91,7 @@
     transform: translate(-50%, -50%);
     width: 20px;
     height: 20px;
-    background-color: rgb(238, 255, 212);
+    background-color: var(--text-primary);
     border-radius: 50%;
     opacity: 0;
     transition: all 0.8s cubic-bezier(0.23, 1, 0.32, 1);
@@ -100,7 +106,7 @@
   
   #Content .animated-button:hover {
     box-shadow: 0 0 0 12px transparent;
-    color: #212121;
+    color: var(--bg-primary);
   }
   
   #Content .animated-button:hover .arr-1 {
@@ -116,12 +122,12 @@
   }
   
   #Content .animated-button:hover svg {
-    fill: #212121;
+    fill: var(--bg-primary);
   }
   
   #Content .animated-button:active {
     scale: 0.95;
-    box-shadow: 0 0 0 4px rgb(238, 255, 212);
+    box-shadow: 0 0 0 4px var(--text-primary);
   }
   
   #Content .animated-button:hover .circle {

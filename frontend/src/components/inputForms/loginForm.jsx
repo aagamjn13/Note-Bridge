@@ -60,8 +60,9 @@ const LoginForm = () => {
       }
     } catch (error) {
       //catches error
+      document.getElementById("submit").innerHTML = `<span class="text">Log-in</span>`;
       setalertMessage(
-        "There was a problem with the upload. Please try again."
+        "There was a problem with the login. Please try again."
       );
     }
   };

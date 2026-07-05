@@ -12,12 +12,14 @@ import SideNavbar from "./components/SideNavbar";
 import UserProfile from "./components/social/userProfile";
 import Post from "./components/social/post";
 import Navbar from "./components/navbar";
+import LandingPage from "./components/LandingPage";
 import "./css/global.css";
 import Notifications from "./components/social/notifications"
 import About from "./components/about";
 
-function App() {
+import Footer from "./components/Footer";
 
+function App() {
 
   const [isSelect, setisSelect] = useState(false); //for select anything
   const [islogout, setislogout] = useState(false); //for check logout of not
@@ -95,46 +97,62 @@ function App() {
   const router = createBrowserRouter([
     {
       path: "/",
+      element: <LandingPage />,
+    },
+    {
+      path: "/dashboard",
       element: (
-        <>
-          <div className="fixedHeight w-100 d-flex overflow-hidden" style={{ height: `${window.innerHeight - 20}px` }}>
-            <SideNavbar />
-            <Post />
+        <div className="fixedHeight w-100 d-flex overflow-hidden" style={{ height: `${window.innerHeight - 20}px` }}>
+          <SideNavbar />
+          <div className="d-flex flex-column flex-grow-1 h-100" style={{ width: '88%' }}>
+            <div className="flex-grow-1 overflow-auto h-100 child-w-100 d-flex flex-column">
+              <div className="flex-grow-1 flex-shrink-0"><Post /></div>
+              <div className="mt-auto flex-shrink-0"><Footer /></div>
+            </div>
           </div>
-        </>
+        </div>
       ),
     },
     {
       path: "/post/:id",
       element: (
-        <>
-          <div className="fixedHeight w-100 d-flex overflow-hidden" style={{ height: `${window.innerHeight - 20}px` }}>
-            <SideNavbar />
-            <Post />
+        <div className="fixedHeight w-100 d-flex overflow-hidden" style={{ height: `${window.innerHeight - 20}px` }}>
+          <SideNavbar />
+          <div className="d-flex flex-column flex-grow-1 h-100" style={{ width: '88%' }}>
+            <div className="flex-grow-1 overflow-auto h-100 child-w-100 d-flex flex-column">
+              <div className="flex-grow-1 flex-shrink-0"><Post /></div>
+              <div className="mt-auto flex-shrink-0"><Footer /></div>
+            </div>
           </div>
-        </>
+        </div>
       ),
     },
     {
       path: "/your/files/:id",
       element: (
-        <>
-          <div className="fixedHeight w-100 d-flex overflow-hidden" style={{ height: `${window.innerHeight - 20}px` }}>
-            <SideNavbar />
-            <UserNotes />
+        <div className="fixedHeight w-100 d-flex overflow-hidden" style={{ height: `${window.innerHeight - 20}px` }}>
+          <SideNavbar />
+          <div className="d-flex flex-column flex-grow-1 h-100" style={{ width: '88%' }}>
+            <div className="flex-grow-1 overflow-auto h-100 child-w-100 d-flex flex-column">
+              <div className="flex-grow-1 flex-shrink-0"><UserNotes /></div>
+              <div className="mt-auto flex-shrink-0"><Footer /></div>
+            </div>
           </div>
-        </>
+        </div>
       ),
     },
     {
       path: "/about",
       element: (
-        <>
-          <div className="fixedHeight d-flex w-100 overflow-hidden" style={{ height: `${window.innerHeight - 20}px` }}>
-            <SideNavbar />
-            <About />
+        <div className="fixedHeight d-flex w-100 overflow-hidden" style={{ height: `${window.innerHeight - 20}px` }}>
+          <SideNavbar />
+          <div className="d-flex flex-column flex-grow-1 h-100" style={{ width: '88%' }}>
+            <div className="flex-grow-1 overflow-auto h-100 child-w-100 d-flex flex-column">
+              <div className="flex-grow-1 flex-shrink-0"><About /></div>
+              <div className="mt-auto flex-shrink-0"><Footer /></div>
+            </div>
           </div>
-        </>
+        </div>
       ),
     },
     {
@@ -162,23 +180,29 @@ function App() {
     {
       path: "/social/notifications",
       element: (
-        <>
-          <div className="fixedHeight  w-100 d-flex overflow-hidden" style={{ height: `${window.innerHeight - 20}px` }}>
-            <SideNavbar />
-            <Notifications />
+        <div className="fixedHeight w-100 d-flex overflow-hidden" style={{ height: `${window.innerHeight - 20}px` }}>
+          <SideNavbar />
+          <div className="d-flex flex-column flex-grow-1 h-100" style={{ width: '88%' }}>
+            <div className="flex-grow-1 overflow-auto h-100 child-w-100 d-flex flex-column">
+              <div className="flex-grow-1 flex-shrink-0"><Notifications /></div>
+              <div className="mt-auto flex-shrink-0"><Footer /></div>
+            </div>
           </div>
-        </>
+        </div>
       ),
     },
     {
       path: "/social/profile/:id",
       element: (
-        <>
-          <div className="fixedHeight w-100 d-flex overflow-hidden" style={{ height: `${window.innerHeight - 20}px` }}>
-            <SideNavbar />
-            <UserProfile />
+        <div className="fixedHeight w-100 d-flex overflow-hidden" style={{ height: `${window.innerHeight - 20}px` }}>
+          <SideNavbar />
+          <div className="d-flex flex-column flex-grow-1 h-100" style={{ width: '88%' }}>
+            <div className="flex-grow-1 overflow-auto h-100 child-w-100 d-flex flex-column">
+              <div className="flex-grow-1 flex-shrink-0"><UserProfile /></div>
+              <div className="mt-auto flex-shrink-0"><Footer /></div>
+            </div>
           </div>
-        </>
+        </div>
       ),
     },
   ]);

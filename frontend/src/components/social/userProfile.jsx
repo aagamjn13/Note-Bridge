@@ -403,9 +403,9 @@ const userProfile = () => {
   return (
     <>
      
-      {navbarVisible && <div className=" position-absolute w-100 top-0">
+      <div className=" position-absolute w-100 top-0">
           <Navbar search={() => { }} />
-      </div>}
+      </div>
    
       <section className="h-100 gradient-custom-2 user-select-none" id="userProfile" >
         <div className="profileLoader w-100 h-100"><LoadingProfile /></div>

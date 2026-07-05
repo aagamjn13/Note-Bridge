@@ -100,17 +100,19 @@ const SignupForm = () => {
         }
 
       } catch (error) {
+        document.getElementById("submit").innerHTML = "Sign-up"
+        document.getElementById("submit").disabled = false
         setalertMessage("There was a problem with the upload. Please try again.")
       }
 
     } else {
+      document.getElementById("submit").innerHTML = "Sign-up"
+      document.getElementById("submit").disabled = false
       setalertIsOk(false)
       setalertMessage("Passwords are different")
-
     }
 
   }
-  console.log(tempimgurl)
 
   useEffect(() => {
     const img = new Image()
@@ -152,7 +154,7 @@ const SignupForm = () => {
           >
             {/* user profile image  */}
             <div className="image overflow-hidden " >
-              <div className="image mx-auto position-relative" style={{ width: "75px" }}>
+              <div className="image mx-auto position-relative" style={{ width: "75px", height: "75px" }}>
                 <img className="w-100 h-100" src={tempimgurl} style={{ borderRadius: "50%", objectFit: "cover", objectPosition: "center" }} />
                 {/* input for choosing profile image  */}
                 <label htmlFor="setProfileImage" className=" bg-black position-absolute bottom-0 end-0 px-1 rounded-circle" data-toggle="tooltip" data-placement="bottom" title="Set Profile Image"><i className="fa-solid fa-camera" style={{ color: "#c7c7c7" }}></i></label>
@@ -320,7 +322,7 @@ const SignupForm = () => {
                   d="M16.1716 10.9999L10.8076 5.63589L12.2218 4.22168L20 11.9999L12.2218 19.778L10.8076 18.3638L16.1716 12.9999H4V10.9999H16.1716Z"
                 ></path>
               </svg>
-              <span className="text">Create</span>
+              <span className="text">Sign-up</span>
               <span className="circle"></span>
               <svg viewBox="0 0 24 24" className="arr-1" xmlns="http://www.w3.org/2000/svg">
                 <path

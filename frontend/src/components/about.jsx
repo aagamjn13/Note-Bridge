@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import io from "socket.io-client";
 import NoteContext from "../context/notes/noteContext";
 import Navbar from './navbar'
+import Footer from './Footer'
 import '../css/about.css'
 
 const about = () => {
@@ -17,6 +18,32 @@ const about = () => {
     const [follow, setfollow] = useState(false)
     const [comments, setcomments] = useState([])
     const [isNavbaeShow, setisNavbaeShow] = useState(false)
+    const [originalUser, setoriginalUser] = useState(null);
+
+    const getOriUser = async () => {
+        if(!value.authtoken || !value.userId) return;
+        try {
+            const res = await fetch(`${value.host}/api/auth/getuser`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    authToken: `${value.authtoken}`,
+                },
+                body: JSON.stringify({
+                    user: `${value.userId}`,
+                    userId: `${value.userId}`
+                }),
+            });
+            const data = await res.json();
+            if (!data.error) {
+                setoriginalUser(data.user);
+            }
+        } catch(e) {}
+    };
+
+    useEffect(() => {
+        getOriUser();
+    }, [value.authtoken]);
 
     useEffect(() => {
         socket.emit("userConnected", `${value.userId}`); //connect to io
@@ -64,76 +91,67 @@ const about = () => {
     return (
         <>
 
-            <div className="container-fluid h-100" id="about">
+            <div className="container-fluid h-100 position-relative" id="about">
 
-                {isNavbaeShow && <Navbar search={() => { }} />}
+                <div className="position-absolute w-100 top-0 z-3">
+                    <Navbar search={() => { }} />
+                </div>
                     
-                <div className="w-100">
-                    <div className="w-100">
-                        <div className="text-center mb-5">
-                            <h1 className="text-primary mb-4 fw-bold aboutHeading">NoteBridge</h1>
-                            <div className="wave-background">
-                                <div className="wave"></div>
-                            </div>
+                <div className="w-100 d-flex flex-column align-items-center pb-5" style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
+                    <div className="w-100 mt-5 pt-5" style={{ maxWidth: '800px' }}>
+                        
+                        {/* Title Section */}
+                        <div className="mb-5 px-4 text-center">
+                            <h1 className="fw-bold mb-3" style={{ fontSize: '3rem', letterSpacing: '-1px' }}>About NoteBridge</h1>
+                            <p className="fs-5" style={{ maxWidth: '600px', margin: '0 auto', color: 'var(--text-secondary)' }}>
+                                A minimalist, unified workspace bridging the gap between secure cloud storage and real-time community interaction.
+                            </p>
                         </div>
-                        <div className="card1 mb-3 shadow rounded-3">
-                            <div className="card-body  fs-5 rounded p-sm-4 py-4 px-3">
-                                <p>Welcome to NoteBridge, a groundbreaking MERN-based project that serves as a comprehensive file management and social networking platform. As our inaugural venture into the realm of web development, NoteBridge represents a culmination of passion, innovation, and countless hours of dedication.</p>
-                            </div>
-                        </div>
-                        <div className="card2 mb-4 shadow rounded-3">
-                            <div className="card-body rounded p-1 p-sm-4">
-                                <h2 className=" heading text-primary mb-3 ms-2 ms-sm-0 mt-2 mt-sm-0">Key Features:</h2>
-                                <ul className="m-0 p-2">
-                                    <li className="list-group-item p-2"><span className=' me-2 fw-bold fs-5'>User Management:</span> Seamlessly create, login, and logout of your account. Update your profile information, set or change your profile image, and keep track of important dates such as account creation, last login, and last update.</li>
-                                    <li className="list-group-item p-2"><span className=' me-2 fw-bold fs-5'>Social Interaction:</span> Engage with other users through a range of social features. Send follow requests, request to view posts, like and comment on posts, and explore user profiles by clicking on their profile images. Stay updated with notifications for new followers, comments, likes, and view requests, allowing you to promptly respond and engage with your community.</li>
-                                    <li className="list-group-item p-2"><span className=' me-2 fw-bold fs-5'>File Management:</span> Effortlessly organize your files with our intuitive file management system. Create folders, upload files, and navigate through nested folders with ease. Delete individual files, folders, or entire folder structures effortlessly.</li>
-                                    <li className="list-group-item p-2"><span className=' me-2 fw-bold fs-5'>Search Functionality:</span> Discover relevant content quickly and efficiently with our powerful search feature. Search through all posts with ease, filtering results based on keywords present in post descriptions.</li>
-                                </ul>
-                            </div>
-                        </div>
-                        <div className="card3 mb-4 shadow rounded-3">
-                            <div className="card-body rounded p-1 p-sm-4">
-                                <h2 className=" heading text-primary mb-3 ms-2 ms-sm-0 mt-2 mt-sm-0">Additional Features:</h2>
-                                <ul className="m-0 p-2">
-                                    <li className="list-group-item p-2"><span className=' fw-bold fs-5'>Social Interaction Enhancements:</span>
-                                        <ul className=" my-2" >
-                                            <li className="list-group-item p-2">🔷 When receiving follow or view requests, users can directly navigate to the profile of the requester.</li>
-                                            <li className="list-group-item p-2">🔷 Users receive notifications for comments on their posts, facilitating quick access to the specific post for interaction.</li>
-                                            <li className="list-group-item p-2">🔷 Each post displays the total number of likes and comments, enabling users to gauge engagement at a glance.</li>
-                                            <li className="list-group-item p-2">🔷 Sharing functionality allows users to disseminate posts via popular social media platforms like WhatsApp and Facebook.</li>
-                                        </ul>
-                                    </li>
-                                    <li className="list-group-item p-2"><span className=' fw-bold fs-5'>Enhanced File Management:</span>
-                                        <ul className=" my-2">
-                                            <li className="list-group-item p-2" >🔷 The file-sharing feature enables users to share files seamlessly via social media platforms, promoting collaboration and ease of access.</li>
-                                            <li className="list-group-item p-2" >🔷 The platform is fully responsive, ensuring optimal usability across various devices, including smartphones. While usable on smaller screens, the experience is optimized for larger displays.</li>
-                                            <li className="list-group-item p-2" >🔷 A skeleton loader ensures a smooth loading experience, preventing frustration when content is being fetched. This loader is implemented in both the post and notification sections.</li>
-                                            <li className="list-group-item p-2" >🔷 Real-time notifications alert users of interactions such as post likes without requiring a page refresh. A pulsating red dot atop the notification icon signals new activity, while notification messages appear in the top corner of the screen for immediate attention.</li>
-                                        </ul>
-                                    </li>
-                                </ul>
-                            </div>
-                        </div>
-                        <div className="card4 mb-4 shadow rounded-3">
-                            <div className="card-body rounded  p-1 p-sm-4">
-                                <h2 className=" heading text-primary mb-3 ms-2 ms-sm-0 mt-2 mt-sm-0">Tech Stack:</h2>
-                                <ul className="m-0 p-2">
-                                    <li className="list-group-item p-2"><span className=' me-2 fw-bold fs-5'>Frontend:</span> Built with React and enhanced with Bootstrap for a sleek and responsive user interface.</li>
-                                    <li className="list-group-item p-2"><span className=' me-2 fw-bold fs-5'>Real-time Communication:</span> Implemented with Socket.IO for instant notifications and seamless interaction.</li>
-                                    <li className="list-group-item p-2"><span className=' me-2 fw-bold fs-5'>Backend:</span> Powered by MongoDB, Express, and Node.js for robust data storage and retrieval.</li>
-                                    <li className="list-group-item p-2"><span className=' me-2 fw-bold fs-5'>Storage:</span> Utilizing Firebase for efficient file storage and retrieval.</li>
-                                </ul>
-                            </div>
-                        </div>
-                        <div className=' text-white disclaimer'>
-                            <p className='fw-bold fs-5 text-info'>Disclaimer:</p>
-                            <p>Please note that for the best user experience, we recommend accessing our platform via desktop or laptop devices. Additionally, ensure a stable internet connection to avoid interruptions in service, particularly when engaging in real-time communication features. We appreciate your understanding as we continue to enhance and optimize our platform for a seamless user experience.
 
-                                For a better understanding, please explore our web application firsthand, and don't hesitate to reach out with any feedback or suggestions for improvement. Thank you for being a part of our journey!</p>
+                        {/* Tech Stack Card */}
+                        <div className="card shadow-sm rounded-4 border mb-5 mx-3" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}>
+                            <div className="card-body p-5">
+                                <h3 className="fw-bold mb-4 d-flex align-items-center" style={{ color: 'var(--text-primary)' }}>
+                                    <i className="fa-solid fa-layer-group me-3" style={{ color: 'var(--text-secondary)' }}></i>
+                                    Architecture & Stack
+                                </h3>
+                                <p className="fs-6 mb-4 lh-lg" style={{ color: 'var(--text-secondary)' }}>
+                                    Built from the ground up as a robust MERN application. NoteBridge employs JWT for stateless authentication, Socket.io for instantaneous communication, and Google Firebase for reliable, secure file storage.
+                                </p>
+                                
+                                <div className="d-flex flex-wrap gap-2 mt-4">
+                                    <span className="badge rounded-pill border px-3 py-2 fw-medium" style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)', borderColor: 'var(--border-color)' }}>React.js</span>
+                                    <span className="badge rounded-pill border px-3 py-2 fw-medium" style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)', borderColor: 'var(--border-color)' }}>Node.js</span>
+                                    <span className="badge rounded-pill border px-3 py-2 fw-medium" style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)', borderColor: 'var(--border-color)' }}>Express</span>
+                                    <span className="badge rounded-pill border px-3 py-2 fw-medium" style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)', borderColor: 'var(--border-color)' }}>MongoDB</span>
+                                    <span className="badge rounded-pill border px-3 py-2 fw-medium" style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)', borderColor: 'var(--border-color)' }}>Socket.io</span>
+                                    <span className="badge rounded-pill border px-3 py-2 fw-medium" style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)', borderColor: 'var(--border-color)' }}>Firebase</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Creator Profile Card */}
+                        <div className="card shadow-sm rounded-4 border mx-3 mb-5" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}>
+                            <div className="card-body p-5 text-center">
+                                <h3 className="fw-bold mb-5" style={{ color: 'var(--text-primary)' }}>Meet the Creator</h3>
+                                <div className="creator-profile d-flex flex-column align-items-center">
+                                    <div className="avatar-circle mb-4" style={{ width: "120px", height: "120px", borderRadius: "50%", overflow: "hidden", border: "2px solid var(--border-color)", padding: '4px', backgroundColor: 'var(--bg-secondary)' }}>
+                                        <img src={`https://ui-avatars.com/api/?name=${originalUser ? originalUser.firstName : 'Aagam+Jain'}&background=random&size=120`} alt={originalUser ? originalUser.firstName : "Aagam Jain"} className="img-fluid rounded-circle" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                    </div>
+                                    <h4 className="fw-bold mb-2 text-white">{value.islogout ? "Aagam Jain" : (originalUser ? originalUser.firstName : "Aagam Jain")}</h4>
+                                    <p className="mb-4" style={{ color: 'var(--text-secondary)' }}>Full Stack Web Developer</p>
+                                    
+                                    <div className="d-flex justify-content-center gap-3">
+                                        <a href="https://github.com/aagamjn13" target="_blank" rel="noreferrer" className="btn btn-outline-secondary rounded-circle d-flex align-items-center justify-content-center" style={{width: "45px", height:"45px", borderColor: 'var(--border-color)', color: 'var(--text-primary)'}}><i className="fa-brands fa-github fs-5"></i></a>
+                                        <a href="#" className="btn btn-outline-secondary rounded-circle d-flex align-items-center justify-content-center" style={{width: "45px", height:"45px", borderColor: 'var(--border-color)', color: 'var(--text-primary)'}}><i className="fa-brands fa-linkedin-in fs-5"></i></a>
+                                        <a href="mailto:aagamjn13@gmail.com" className="btn btn-outline-secondary rounded-circle d-flex align-items-center justify-content-center" style={{width: "45px", height:"45px", borderColor: 'var(--border-color)', color: 'var(--text-primary)'}}><i className="fa-solid fa-envelope fs-5"></i></a>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
+                <Footer />
             </div>
         </>
 

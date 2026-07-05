@@ -4,7 +4,7 @@ const serviceAccount = require("./serviceAccountKey.json");
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
-  storageBucket: "gs://enotebook-b18cd.appspot.com",
+  storageBucket: "gs://note-bridge-app.firebasestorage.app",
 });
 
 const bucket = admin.storage().bucket();

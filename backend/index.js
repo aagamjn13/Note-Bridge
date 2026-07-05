@@ -42,8 +42,10 @@ app.use('/api/auth', Auth);
 app.use('/api/notes', Notes);
 app.use('/api/folder', Folder);
 app.use('/api/social', Post);
-app.use('/api/notification' , notification)
+app.use('/api/notification' , notification);
 
+const AI = require('./routes/ai');
+app.use('/api/ai', AI);
 
 // Users object to store all users' socket IDs with their user IDs
 const users = {};

@@ -16,6 +16,10 @@ const navbar = (props) => {
   const [isVisible, setisVisible] = useState(window.innerWidth <= 625 ? true : false)
   const [unseen, setunseen] = useState(false)
 
+  const logout = () => {
+    localStorage.removeItem("authtoken");
+    localStorage.removeItem("userId");
+  };
 
   //function to save original user details
   const getOriUser = async () => {
@@ -60,7 +64,21 @@ const navbar = (props) => {
 
   useEffect(() => {
     getOriUser()
+    const savedTheme = localStorage.getItem("theme") || "dark";
+    setTheme(savedTheme);
   }, [])
+
+  const [theme, setTheme] = useState("dark");
+  const toggleTheme = () => {
+    const newTheme = theme === "dark" ? "light" : "dark";
+    setTheme(newTheme);
+    document.documentElement.setAttribute("data-theme", newTheme);
+    localStorage.setItem("theme", newTheme);
+  };
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+  }, [theme]);
 
   useEffect(() => {
     !(window.location.pathname.includes("/about") || window.location.pathname.includes("/your/files")) ?
@@ -169,8 +187,8 @@ const navbar = (props) => {
         <i className="fs-3 fa-solid fa-bars text-white" style={{ cursor: "pointer" }} onClick={slideMenu}></i>
       </div>}
 
-      {(window.location.pathname === "/") &&
-        <div className="searchBar mx-auto d-flex justify-content-center align-items-center rounded-3 w-100">
+      <div className="searchBar mx-auto d-flex justify-content-center align-items-center rounded-3 w-100">
+        {(window.location.pathname === "/dashboard" || window.location.pathname.includes("/your/files")) ? (
           <form className=" d-flex justify-content-center align-items-end" onSubmit={(e) => {
             e.preventDefault()
             props.search(e.currentTarget.querySelector('input').value)
@@ -183,9 +201,15 @@ const navbar = (props) => {
               <i className="fa-solid fa-magnifying-glass"></i>
             </button>
           </form>
-        </div>}
+        ) : (
+          <div className="text-center w-100"><span className="fw-bold" style={{color: 'var(--text-primary)', fontSize: '1.2rem', letterSpacing: '1px'}}>NoteBridge</span></div>
+        )}
+      </div>
 
-      {isVisible && <div className="profile mb-1">
+      <div className="profile mb-1 d-flex align-items-center">
+        <button onClick={toggleTheme} className="btn btn-sm btn-outline-secondary me-3 rounded-circle" style={{ width: "35px", height: "35px" }}>
+          <i className={`fa-solid ${theme === 'dark' ? 'fa-sun' : 'fa-moon'}`}></i>
+        </button>
         <div className="dropdown">
           <a
             className="d-flex align-items-center text-white text-decoration-none dropdown-toggle"
@@ -204,7 +228,7 @@ const navbar = (props) => {
             />
           </a>
           <ul className="dropdown-menu dropdown-menu-dark text-small shadow">
-            <li style={{ cursor: "pointer" }}>
+            <li style={{ cursor: "pointer" }} className={`${value.islogout === false ? "d-none" : ""}`}>
               <Link className="dropdown-item" to="/user/logIn">
                 Log in
               </Link>
@@ -241,7 +265,7 @@ const navbar = (props) => {
             </li>
           </ul>
         </div>
-      </div>}
+      </div>
 
     </nav>
   );

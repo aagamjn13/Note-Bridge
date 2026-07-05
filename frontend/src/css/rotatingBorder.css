@@ -5,18 +5,18 @@
   background: transparent;
   position: relative;
   padding: 1.8rem;
-  border: 2px solid #fbfee349;
+  border: 2px solid var(--border-color);
   transition: 0.5s ease-out;
   overflow: visible;
 }
 
 /*Hover*/
 .importedcard:hover {
-  border-color: #adade993;
-  box-shadow: 0 4px 18px 0 #adade996;
+  border-color: var(--accent-color);
+  box-shadow: 0 4px 18px 0 var(--border-color);
 }
 .importedcard h2{
-  color: beige;
+  color: var(--text-primary);
 }
 
 @media (max-width:850px){
