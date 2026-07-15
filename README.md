@@ -56,7 +56,7 @@
 - **Cloud Storage:** Firebase Storage stores uploaded files while MongoDB stores only the corresponding metadata and download URLs.
 - **Real-time Layer:** Socket.IO enables instant notifications and live updates across connected users.
 - **AI Layer:** Google Gemini API generates summaries and tags for text-based notes.
-
+   
 ---
  
 ## 🌟 Highlights
