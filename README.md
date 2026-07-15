@@ -58,7 +58,7 @@
 - **AI Layer:** Google Gemini API generates summaries and tags for text-based notes.
 
 ---
-
+ 
 ## 🌟 Highlights
 
 - Full MERN Stack Application
