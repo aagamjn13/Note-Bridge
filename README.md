@@ -1,5 +1,7 @@
 # 📚 Note-Bridge
 
+**Live Demo:** [https://note-bridge-aagam.onrender.com/](https://note-bridge-aagam.onrender.com/)
+
 **Note-Bridge** is a MERN-based **real-time social note-sharing platform** designed to help students and learners organize, store, and share their notes efficiently. It combines cloud-based file storage, social networking features, and AI-powered note summarization to create a collaborative learning environment.
 
 ---
