@@ -151,6 +151,23 @@ const LoginForm = () => {
               </svg>
             </button>
 
+            <button
+              type="button"
+              className="btn btn-secondary mt-3 animated-button mx-auto"
+              style={{ backgroundColor: "#6c757d", borderColor: "#6c757d" }}
+              onClick={(e) => {
+                e.preventDefault();
+                value.authtoken = "guest";
+                value.userId = "guest";
+                localStorage.setItem("authtoken", "guest");
+                localStorage.setItem("userId", "guest");
+                value.setislogout(false);
+                navigate("/");
+              }}
+            >
+              <span className="text">Login as Guest</span>
+            </button>
+
             <p className=" fw-light text-white text-center my-3" style={{letterSpacing:"1px"}}>
               does not have any account ?
               <Link
