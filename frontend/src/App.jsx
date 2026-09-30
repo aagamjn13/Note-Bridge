@@ -30,7 +30,7 @@ function App() {
 
   const [aboutPost, setaboutPost] = useState([])
 
-  const host = import.meta.env.VITE_REACT_HOST;
+  const host = import.meta.env.VITE_REACT_HOST || "";
   const authtoken = localStorage.getItem("authtoken");
   const userId = localStorage.getItem("userId");
   const [unReadNotificationLength, setunReadNotificationLength] = useState(0)
