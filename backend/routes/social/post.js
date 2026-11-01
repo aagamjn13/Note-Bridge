@@ -1,5 +1,4 @@
 const express = require("express");
-const mongoose = require("mongoose");
 const router = express.Router();
 const fetchuser = require("../../middlewire/fetchUser");
 const Note = require("../../models/notes");
@@ -13,76 +12,54 @@ const Follow = require("../../models/social/followReq");
 const Comment = require("../../models/social/commentSave");
 require('dotenv').config();
 
-const app = express();
-
-async function connectToMongo() {
-  await mongoose.connect(`${process.env.MONGODB_URL}`);
-}
-
-//route-1 : to post file
+// Route 1: Post file(s)
 router.post("/post/file/upload", fetchuser, async (req, res) => {
-  //connect to mongodb
-  connectToMongo();
   try {
-    //check is the same user or not
     if (req.id !== req.body.user) {
-      return res
-        .status(401)
-        .json({ error: true, message: "authentication denied" });
+      return res.status(401).json({ error: true, message: "authentication denied" });
     }
-    const files = [];
-    for (let index = 0; index < req.body.id.length; index++) {
-      const newfile = await Note.findOne({
+    const ids = Array.isArray(req.body.id) ? req.body.id : [];
+    for (let index = 0; index < ids.length; index++) {
+      const fileDoc = await Note.findOne({
         user: req.id,
-        _id: req.body.id[index],
+        _id: ids[index],
       });
-      files.push(newfile);
+      if (fileDoc) {
+        const newPost = new Post({
+          file: fileDoc,
+          user: req.id,
+          type: "file",
+          folderPath: req.body.folderPath,
+          aboutId: req.body.aboutId,
+        });
+        await newPost.save();
+      }
     }
-
-    for (let index = 0; index < files.length; index++) {
-      const newPost = new Post({
-        file: files[index],
-        user: req.id,
-        type: "file",
-        folderPath: req.body.folderPath,
-        aboutId: req.body.aboutId,
-      });
-      newPost.save();
-    }
-
     return res.json({ error: false, message: "Post successfully" });
   } catch (error) {
-     return res.status(500).json({ error: true, message: "some error occured" });
+    console.error("Post file upload error:", error);
+    return res.status(500).json({ error: true, message: "some error occured" });
   }
 });
 
-//route-2 : to post folders
+// Route 2: Post folder(s)
 router.post("/post/folder/upload", fetchuser, async (req, res) => {
-  //connect to mongodb
-  connectToMongo();
   try {
-    //check is the same user or not
     if (req.id !== req.body.user) {
-      return res
-        .status(401)
-        .json({ error: true, message: "authentication denied" });
+      return res.status(401).json({ error: true, message: "authentication denied" });
     }
 
-    ///fetch all folders of the user
-    let allFolders = await Folder.find({ user: req.id });
+    const allFolders = await Folder.find({ user: req.id });
+    const allFiles = await Note.find({ user: req.id });
+    const folderIds = Array.isArray(req.body.id) ? req.body.id : [];
 
-    //fetch all notes of this user
-    let allFiles = await Note.find({ user: req.id });
-
-    let insideFolder = [];
-    let insideFile = [];
-    for (let index = 0; index < req.body.id.length; index++) {
+    for (let index = 0; index < folderIds.length; index++) {
       const folder = await Folder.findOne({
         user: req.id,
-        _id: req.body.id[index],
+        _id: folderIds[index],
       });
+      if (!folder) continue;
 
-      //save original folder to moongodb
       const originalFolder = new Post({
         folder: folder,
         user: req.id,
@@ -90,58 +67,43 @@ router.post("/post/folder/upload", fetchuser, async (req, res) => {
         folderPath: req.body.folderPath,
         aboutId: req.body.aboutId,
       });
-      originalFolder.save();
+      await originalFolder.save();
 
-      //separate folders which is inside that single folder
-      for (let index = 0; index < allFolders.length; index++) {
-        if (
-          allFolders[index].folderPath.startsWith(
-            `${req.body.folderPath}/${folder.name}`
-          )
-        ) {
-          insideFolder.push(allFolders[index]);
+      const folderPrefix = `${req.body.folderPath}/${folder.name}`;
+
+      // Save inside folders
+      for (let f = 0; f < allFolders.length; f++) {
+        if (allFolders[f].folderPath && allFolders[f].folderPath.startsWith(folderPrefix)) {
+          const postFolder = new Post({
+            folder: allFolders[f],
+            user: req.id,
+            type: "folder",
+            folderPath: allFolders[f].folderPath,
+            aboutId: req.body.aboutId,
+          });
+          await postFolder.save();
         }
       }
 
-      //separate files which is inside that single folder
-      for (let index = 0; index < allFiles.length; index++) {
-        if (
-          allFiles[index].folderPath.startsWith(
-            `${req.body.folderPath}/${folder.name}`
-          )
-        ) {
-          insideFile.push(allFiles[index]);
+      // Save inside files
+      for (let fi = 0; fi < allFiles.length; fi++) {
+        if (allFiles[fi].folderPath && allFiles[fi].folderPath.startsWith(folderPrefix)) {
+          const postFile = new Post({
+            file: allFiles[fi],
+            user: req.id,
+            type: "file",
+            folderPath: allFiles[fi].folderPath,
+            aboutId: req.body.aboutId,
+          });
+          await postFile.save();
         }
       }
-    }
-
-    //save all inside folders to mongodb
-    for (let index = 0; index < insideFolder.length; index++) {
-      const postFolder = new Post({
-        folder: insideFolder[index],
-        user: req.id,
-        type: "folder",
-        folderPath: insideFolder[index].folderPath,
-        aboutId: req.body.aboutId,
-      });
-      postFolder.save();
-    }
-
-    //save all inside files to mongodb
-    for (let index = 0; index < insideFile.length; index++) {
-      const postFile = new Post({
-        file: insideFile[index],
-        user: req.id,
-        type: "file",
-        folderPath: insideFile[index].folderPath,
-        aboutId: req.body.aboutId,
-      });
-      postFile.save();
     }
 
     return res.json({ error: false, message: "successful" });
   } catch (error) {
-     return res.json({
+    console.error("Post folder upload error:", error);
+    return res.status(500).json({
       status: 500,
       error: true,
       message: "some error occured",
@@ -149,14 +111,11 @@ router.post("/post/folder/upload", fetchuser, async (req, res) => {
   }
 });
 
-//router-3 for upload about  of post
+// Route 3: Upload about of post
 router.post("/post/about", fetchuser, async (req, res) => {
-  //connect to mongodb
-  connectToMongo();
   try {
-    //check is the same user or not
     if (req.id !== req.body.user) {
-      return res.json({
+      return res.status(401).json({
         status: 401,
         error: true,
         message: "authentication denied",
@@ -167,11 +126,11 @@ router.post("/post/about", fetchuser, async (req, res) => {
       user: req.id,
       about: req.body.about,
     });
-
-    aboutPost.save();
+    await aboutPost.save();
     return res.json({ error: false, aboutId: aboutPost._id });
   } catch (error) {
-     return res.json({
+    console.error("Post about error:", error);
+    return res.status(500).json({
       status: 500,
       error: true,
       message: "some error occured",
@@ -179,24 +138,22 @@ router.post("/post/about", fetchuser, async (req, res) => {
   }
 });
 
-//router-4 to fetch all single files
+// Route 4: Fetch files for given aboutIds
 router.put("/post/fetch", async (req, res) => {
-  //connect to mongodb
-  connectToMongo();
   try {
-    let allfiles = [];
-    for (let index = 0; index < req.body.aboutId.length; index++) {
+    const aboutIds = Array.isArray(req.body.aboutId) ? req.body.aboutId : [];
+    const allfiles = [];
+    for (let index = 0; index < aboutIds.length; index++) {
       const files = await Post.find({
         type: "file",
-        aboutId: req.body.aboutId[index],
+        aboutId: aboutIds[index],
       });
       allfiles.push(files);
     }
-    // const folders = await Post.find({type: "folder"});
-
     return res.json({ error: false, allfiles });
   } catch (error) {
-     return res.json({
+    console.error("Post fetch error:", error);
+    return res.status(500).json({
       status: 500,
       error: true,
       message: "some error occured",
@@ -204,17 +161,14 @@ router.put("/post/fetch", async (req, res) => {
   }
 });
 
-//router-5 for fetching all about
+// Route 5: Fetch all about posts
 router.put("/post/about/fetch", async (req, res) => {
-  //connect to mongodb
-  connectToMongo();
   try {
-    
     const about = await About.find({});
-
     return res.json({ error: false, about });
   } catch (error) {
-     return res.json({
+    console.error("Post about fetch error:", error);
+    return res.status(500).json({
       status: 500,
       error: true,
       message: "some error occured",
@@ -222,21 +176,20 @@ router.put("/post/about/fetch", async (req, res) => {
   }
 });
 
-//router-6 for fetching all user details without password
+// Route 6: Fetch user details by IDs without password (batch optimized)
 router.put("/post/user/fetch", async (req, res) => {
-  //connect to mongodb
-  connectToMongo();
   try {
-   
-    let users = [];
-    for (let index = 0; index < req.body.id.length; index++) {
-      const user = await User.findById(req.body.id[index]).select("-password")
-      users.push(user);
-    }
-
+    const ids = Array.isArray(req.body.id) ? req.body.id : [];
+    const foundUsers = await User.find({ _id: { $in: ids } }).select("-password");
+    const userMap = {};
+    foundUsers.forEach((u) => {
+      userMap[u._id.toString()] = u;
+    });
+    const users = ids.map((id) => userMap[id.toString()] || null);
     return res.json({ error: false, users });
   } catch (error) {
-     return res.json({
+    console.error("Post user fetch error:", error);
+    return res.status(500).json({
       status: 500,
       error: true,
       message: "some error occured",
@@ -244,41 +197,41 @@ router.put("/post/user/fetch", async (req, res) => {
   }
 });
 
-//router-7 for submitting like post
+// Route 7: Submit like/unlike
 router.post("/post/like/submit", fetchuser, async (req, res) => {
-  //connect to mongodb
-  connectToMongo();
   try {
-    //check is the same user or not
     if (req.id !== req.body.user) {
-      return res.json({
+      return res.status(401).json({
         status: 401,
         error: true,
         message: "authentication denied",
       });
     }
-    //check already liked or not if exist then delete it
+
     if (req.body.isLiked === false) {
-      const id = (
-        await Like.findOne({ user: req.id, aboutId: req.body.aboutId })
-      )._id;
+      const existing = await Like.findOne({ user: req.id, aboutId: req.body.aboutId });
+      const id = existing ? existing._id : null;
       await Like.deleteOne({ user: req.id, aboutId: req.body.aboutId });
       return res.json({ error: false, message: "unlike successfully", id });
     }
 
-    //if first time then creat like
     if (req.body.isLiked === true) {
+      const existing = await Like.findOne({ user: req.id, aboutId: req.body.aboutId });
+      if (existing) {
+        return res.json({ error: false, newLike: existing });
+      }
       const newLike = new Like({
         user: req.id,
         isLiked: req.body.isLiked,
         aboutId: req.body.aboutId,
         userId: req.body.userId,
       });
-      newLike.save();
+      await newLike.save();
       return res.json({ error: false, newLike });
     }
   } catch (error) {
-     return res.json({
+    console.error("Post like submit error:", error);
+    return res.status(500).json({
       status: 500,
       error: true,
       message: "some error occured",
@@ -286,24 +239,21 @@ router.post("/post/like/submit", fetchuser, async (req, res) => {
   }
 });
 
-//router-8 to fetch all likes of a particular user
+// Route 8: Fetch all likes of a user
 router.put("/post/like/fetch", fetchuser, async (req, res) => {
-  //connect to mongodb
-  connectToMongo();
   try {
-    //check is the same user or not
     if (req.id !== req.body.user) {
-      return res.json({
+      return res.status(401).json({
         status: 401,
         error: true,
         message: "authentication denied",
       });
     }
-
     const allLikes = await Like.find({ user: req.id });
     return res.json({ error: false, allLikes });
   } catch (error) {
-     return res.json({
+    console.error("Post like fetch error:", error);
+    return res.status(500).json({
       status: 500,
       error: true,
       message: "some error occured",
@@ -311,31 +261,31 @@ router.put("/post/like/fetch", fetchuser, async (req, res) => {
   }
 });
 
-//router-14 to fetch all likes of a particular post
-router.put("/post/like/about/fetch" , async(req,res)=>{
+// Route 9: Fetch all likes of given posts (batch optimized)
+router.put("/post/like/about/fetch", async (req, res) => {
   try {
-    let allLikes = []
-    for (let index = 0; index < req.body.aboutId.length; index++) {
-      const likes = await Like.find({aboutId : req.body.aboutId[index]})
-      allLikes.push(likes)
+    const aboutIds = Array.isArray(req.body.aboutId) ? req.body.aboutId : [];
+    const allLikes = [];
+    for (let index = 0; index < aboutIds.length; index++) {
+      const likes = await Like.find({ aboutId: aboutIds[index] });
+      allLikes.push(likes);
     }
-    return res.json({error:false , allLikes})
+    return res.json({ error: false, allLikes });
   } catch (error) {
-     return res.json({
+    console.error("Post like about fetch error:", error);
+    return res.status(500).json({
       status: 500,
       error: true,
       message: "some error occured",
     });
   }
-})
+});
 
-//router-9 to send requrest to view notes
+// Route 10: View request
 router.post("/post/view/req/post", fetchuser, async (req, res) => {
-  connectToMongo();
   try {
-    //check is the same user or not
     if (req.id !== req.body.user) {
-      return res.json({
+      return res.status(401).json({
         status: 401,
         error: true,
         message: "authentication denied",
@@ -343,10 +293,9 @@ router.post("/post/view/req/post", fetchuser, async (req, res) => {
     }
 
     if (req.body.isreq === false) {
-      const id = (
-        await View.findOne({ user: req.id, aboutId: req.body.aboutId , isRejected : false })
-      )._id
-      await View.deleteOne({ user: req.id, aboutId: req.body.aboutId , isRejected : false });
+      const existing = await View.findOne({ user: req.id, aboutId: req.body.aboutId, isRejected: false });
+      const id = existing ? existing._id : null;
+      await View.deleteOne({ user: req.id, aboutId: req.body.aboutId, isRejected: false });
       return res.json({
         error: false,
         message: "request cancel successfully",
@@ -360,7 +309,10 @@ router.post("/post/view/req/post", fetchuser, async (req, res) => {
         aboutId: req.body.aboutId,
         isRejected: false,
       });
-      
+      if (oldReq) {
+        return res.json({ error: false, newReq: oldReq });
+      }
+
       const newReq = new View({
         user: req.id,
         isreq: req.body.isreq,
@@ -368,11 +320,12 @@ router.post("/post/view/req/post", fetchuser, async (req, res) => {
         userId: req.body.userId,
         isRejected: false,
       });
-      newReq.save();
+      await newReq.save();
       return res.json({ error: false, newReq });
     }
   } catch (error) {
-     return res.json({
+    console.error("Post view req error:", error);
+    return res.status(500).json({
       status: 500,
       error: true,
       message: "some error occured",
@@ -380,22 +333,21 @@ router.post("/post/view/req/post", fetchuser, async (req, res) => {
   }
 });
 
-//router-14 to fetch all view request
+// Route 11: Get all view requests for a user
 router.put("/post/view/get", fetchuser, async (req, res) => {
-  connectToMongo();
   try {
-    //check is the same user or not
     if (req.id !== req.body.user) {
-      return res.json({
+      return res.status(401).json({
         status: 401,
         error: true,
         message: "authentication denied",
       });
     }
-    const allViewReq = await View.find({user : req.id , isRejected : false})
-    return res.json({error : false , allViewReq})
+    const allViewReq = await View.find({ user: req.id, isRejected: false });
+    return res.json({ error: false, allViewReq });
   } catch (error) {
-     return res.json({
+    console.error("Post view get error:", error);
+    return res.status(500).json({
       status: 500,
       error: true,
       message: "some error occured",
@@ -403,13 +355,11 @@ router.put("/post/view/get", fetchuser, async (req, res) => {
   }
 });
 
-//router-10 to save follow req
+// Route 12: Follow / Unfollow request
 router.post("/post/follow/req", fetchuser, async (req, res) => {
-  connectToMongo();
   try {
-    //check is the same user or not
     if (req.id !== req.body.user) {
-      return res.json({
+      return res.status(401).json({
         status: 401,
         error: true,
         message: "authentication denied",
@@ -418,16 +368,12 @@ router.post("/post/follow/req", fetchuser, async (req, res) => {
     const followingId = req.body.userId;
 
     if (req.body.isreq === false) {
-      const id = (
-        await Follow.findOne({ followerId: req.id, followingId: followingId })
-      )._id;
-      if (id !== null) {
-        await Follow.deleteOne({
-          followerId: req.id,
-          followingId: followingId,
-        });
-        return res.json({ error: false, message: "unfollow successfully", id });
+      const existing = await Follow.findOne({ followerId: req.id, followingId: followingId });
+      if (existing) {
+        await Follow.deleteOne({ followerId: req.id, followingId: followingId });
+        return res.json({ error: false, message: "unfollow successfully", id: existing._id });
       }
+      return res.json({ error: false, message: "unfollow successfully", id: null });
     }
 
     if (req.body.isreq === true) {
@@ -445,11 +391,12 @@ router.post("/post/follow/req", fetchuser, async (req, res) => {
         isreq: req.body.isreq,
         isRejected: false,
       });
-      newReq.save();
+      await newReq.save();
       return res.json({ error: false, newReq });
     }
   } catch (error) {
-     return res.json({
+    console.error("Post follow req error:", error);
+    return res.status(500).json({
       status: 500,
       error: true,
       message: "some error occured",
@@ -457,13 +404,11 @@ router.post("/post/follow/req", fetchuser, async (req, res) => {
   }
 });
 
-//router-12 to fetch all follows
+// Route 13: Fetch follow requests for a user
 router.put("/post/follow/get", fetchuser, async (req, res) => {
-  connectToMongo();
   try {
-    //check is the same user or not
     if (req.id !== req.body.user) {
-      return res.json({
+      return res.status(401).json({
         status: 401,
         error: true,
         message: "authentication denied",
@@ -475,7 +420,8 @@ router.put("/post/follow/get", fetchuser, async (req, res) => {
     });
     return res.json({ error: false, allFollow });
   } catch (error) {
-     return res.json({
+    console.error("Post follow get error:", error);
+    return res.status(500).json({
       status: 500,
       error: true,
       message: "some error occured",
@@ -483,13 +429,11 @@ router.put("/post/follow/get", fetchuser, async (req, res) => {
   }
 });
 
-//router-11 to save comments of a use to a post
+// Route 14: Save comment
 router.post("/post/comment/post", fetchuser, async (req, res) => {
-  connectToMongo();
   try {
-    //check is the same user or not
     if (req.id !== req.body.user) {
-      return res.json({
+      return res.status(401).json({
         status: 401,
         error: true,
         message: "authentication denied",
@@ -502,10 +446,11 @@ router.post("/post/comment/post", fetchuser, async (req, res) => {
       aboutId: req.body.aboutId,
       userId: req.body.userId,
     });
-    newComment.save();
+    await newComment.save();
     return res.json({ error: false, newComment });
   } catch (error) {
-     return res.json({
+    console.error("Post comment save error:", error);
+    return res.status(500).json({
       status: 500,
       error: true,
       message: "some error occured",
@@ -513,20 +458,19 @@ router.post("/post/comment/post", fetchuser, async (req, res) => {
   }
 });
 
-//router-13 to fetch all comments
+// Route 15: Fetch comments for given aboutIds
 router.put("/post/comment/get", async (req, res) => {
-  connectToMongo();
   try {
-   
-    let allComments = [];
-    for (let index = 0; index < req.body.aboutId.length; index++) {
-      const comment = await Comment.find({ aboutId: req.body.aboutId[index] });
-      comment.reverse();
-      allComments.push(comment);
+    const aboutIds = Array.isArray(req.body.aboutId) ? req.body.aboutId : [];
+    const allComments = [];
+    for (let index = 0; index < aboutIds.length; index++) {
+      const comments = await Comment.find({ aboutId: aboutIds[index] }).sort({ date: -1 });
+      allComments.push(comments);
     }
     return res.json({ error: false, allComments });
   } catch (error) {
-     return res.json({
+    console.error("Post comment get error:", error);
+    return res.status(500).json({
       status: 500,
       error: true,
       message: "some error occured",

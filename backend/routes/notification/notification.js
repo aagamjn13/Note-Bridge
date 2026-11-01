@@ -1,96 +1,100 @@
 const express = require("express");
-const mongoose = require("mongoose");
 const router = express.Router();
 const fetchuser = require("../../middlewire/fetchUser");
-const Note = require("../../models/notes");
 const User = require("../../models/auth");
-const Post = require("../../models/social/postUpload");
-const Folder = require("../../models/folder");
-const About = require("../../models/social/postAbout");
 const Like = require("../../models/social/postLike");
 const View = require("../../models/social/viewReq");
 const Follow = require("../../models/social/followReq");
 const Comment = require("../../models/social/commentSave");
 require("dotenv").config();
 
-const app = express();
-
-async function connectToMongo() {
-  await mongoose.connect(`${process.env.MONGODB_URL}`);
-}
-
-//router to fetch all notifications
+// Router to fetch all notifications (batch-optimized to eliminate N+1 queries)
 router.post("/get", fetchuser, async (req, res) => {
-  connectToMongo();
   try {
-    //check is the same user or not
     if (req.id !== req.body.user) {
-      return res.json({
+      return res.status(401).json({
         status: 401,
         error: true,
         message: "authentication denied",
       });
     }
 
-    //fetch all likes from mongo
-    const AllLikes = await Like.find({ userId: req.id });
-    AllLikes.filter((like) => like.user !== req.id);
+    const [AllLikes, allFollowReq, allViewReq, allComment] = await Promise.all([
+      Like.find({ userId: req.id }),
+      Follow.find({ followingId: req.id }),
+      View.find({ userId: req.id }),
+      Comment.find({ userId: req.id }),
+    ]);
+
+    // Collect all unique user IDs needed across notifications
+    const userIdsSet = new Set();
+    AllLikes.forEach((l) => {
+      if (l.user && l.user.toString() !== req.id) userIdsSet.add(l.user.toString());
+    });
+    allFollowReq.forEach((f) => {
+      if (f.followerId) userIdsSet.add(f.followerId.toString());
+    });
+    allViewReq.forEach((v) => {
+      if (v.user) userIdsSet.add(v.user.toString());
+    });
+    allComment.forEach((c) => {
+      if (c.user && c.user.toString() !== req.id) userIdsSet.add(c.user.toString());
+    });
+
+    // Single batch query for all related users
+    const usersList = await User.find({ _id: { $in: Array.from(userIdsSet) } }).select("-password");
+    const userMap = new Map();
+    usersList.forEach((u) => userMap.set(u._id.toString(), u));
+
+    // Build Likes array
     const likeArr = [];
     for (let index = AllLikes.length - 1; index >= 0; index--) {
-      if ((AllLikes[index].user).toString() !== req.id) {
-        const likeArrElement = {};
-        const likeUser = await User.findById(AllLikes[index].user).select(
-          "-password"
-        );
-        likeArrElement["notification"] = AllLikes[index];
-        likeArrElement["user"] = likeUser;
-        likeArrElement["message"] = "liked your post";
-        likeArr.push(likeArrElement);
+      const l = AllLikes[index];
+      if (l.user && l.user.toString() !== req.id) {
+        likeArr.push({
+          notification: l,
+          user: userMap.get(l.user.toString()) || null,
+          message: "liked your post",
+        });
       }
     }
 
-    //fetch all follow requests
-    const allFollowReq = await Follow.find({ followingId: req.id });
+    // Build Follow Requests array
     const FollowReqArr = [];
     for (let index = allFollowReq.length - 1; index >= 0; index--) {
-      const reqElement = {};
-      const followerUser = await User.findById(
-        allFollowReq[index].followerId
-      ).select("-password");
-      reqElement["notification"] = allFollowReq[index];
-      reqElement["user"] = followerUser;
-      reqElement["message"] = "sent you follow request";
-      FollowReqArr.push(reqElement);
+      const f = allFollowReq[index];
+      if (f.followerId) {
+        FollowReqArr.push({
+          notification: f,
+          user: userMap.get(f.followerId.toString()) || null,
+          message: "sent you follow request",
+        });
+      }
     }
 
-    //fetch all view requests
-    const allViewReq = await View.find({ userId: req.id });
+    // Build View Requests array
     const allViewReqArr = [];
     for (let index = allViewReq.length - 1; index >= 0; index--) {
-      const ViewReqElement = {};
-      const followerUser = await User.findById(allViewReq[index].user).select(
-        "-password"
-      );
-      ViewReqElement["notification"] = allViewReq[index];
-      ViewReqElement["user"] = followerUser;
-      ViewReqElement["message"] = "wants to see your post";
-      allViewReqArr.push(ViewReqElement);
+      const v = allViewReq[index];
+      if (v.user) {
+        allViewReqArr.push({
+          notification: v,
+          user: userMap.get(v.user.toString()) || null,
+          message: "wants to see your post",
+        });
+      }
     }
 
-    //fetch all comments
-    const allComment = await Comment.find({ userId: req.id });
-
+    // Build Comments array
     const allCommentArr = [];
     for (let index = allComment.length - 1; index >= 0; index--) {
-      if ((allComment[index].user).toString() !== req.id) {
-        const commentElement = {};
-        const followerUser = await User.findById(allComment[index].user).select(
-          "-password"
-        );
-        commentElement["notification"] = allComment[index];
-        commentElement["user"] = followerUser;
-        commentElement["message"] = "commented on your post";
-        allCommentArr.push(commentElement);
+      const c = allComment[index];
+      if (c.user && c.user.toString() !== req.id) {
+        allCommentArr.push({
+          notification: c,
+          user: userMap.get(c.user.toString()) || null,
+          message: "commented on your post",
+        });
       }
     }
 
@@ -103,7 +107,8 @@ router.post("/get", fetchuser, async (req, res) => {
 
     return res.json({ error: false, allNotification });
   } catch (error) {
-    return res.json({
+    console.error("Get notifications error:", error);
+    return res.status(500).json({
       status: 500,
       error: true,
       message: "some error occured",
@@ -111,33 +116,39 @@ router.post("/get", fetchuser, async (req, res) => {
   }
 });
 
-//router -2 to accept req
+// Router to accept request
 router.put("/accept/req", fetchuser, async (req, res) => {
-  connectToMongo();
   try {
-    //check is the same user or not
     if (req.id !== req.body.user) {
-      return res.json({
+      return res.status(401).json({
         status: 401,
         error: true,
         message: "authentication denied",
       });
     }
 
-    //get request from mongodb
     if (req.body.reqType === "follow") {
-      await Follow.findByIdAndUpdate(req.body.reqId, { isaccept: true });
-      const newFollow = await Follow.findById(req.body.reqId);
+      const newFollow = await Follow.findByIdAndUpdate(
+        req.body.reqId,
+        { isaccept: true },
+        { new: true }
+      );
       return res.json({ error: false, reqAccept: newFollow });
     }
 
     if (req.body.reqType === "view") {
-      await View.findByIdAndUpdate(req.body.reqId, { isaccept: true });
-      const accept = await View.findById(req.body.reqId);
+      const accept = await View.findByIdAndUpdate(
+        req.body.reqId,
+        { isaccept: true },
+        { new: true }
+      );
       return res.json({ error: false, reqAccept: accept });
     }
+
+    return res.status(400).json({ error: true, message: "Invalid request type" });
   } catch (error) {
-    return res.json({
+    console.error("Accept request error:", error);
+    return res.status(500).json({
       status: 500,
       error: true,
       message: "some error occured",
@@ -145,13 +156,11 @@ router.put("/accept/req", fetchuser, async (req, res) => {
   }
 });
 
-//router -3 to deny req
+// Router to deny request
 router.delete("/deny/req", fetchuser, async (req, res) => {
-  connectToMongo();
   try {
-    //check is the same user or not
     if (req.id !== req.body.user) {
-      return res.json({
+      return res.status(401).json({
         status: 401,
         error: true,
         message: "authentication denied",
@@ -159,20 +168,27 @@ router.delete("/deny/req", fetchuser, async (req, res) => {
     }
 
     if (req.body.reqType === "follow") {
-      await Follow.findByIdAndUpdate(req.body.reqId, {
-        isRejected: true,
-      });
-      const DenyFollow = await Follow.findById(req.body.reqId);
+      const DenyFollow = await Follow.findByIdAndUpdate(
+        req.body.reqId,
+        { isRejected: true },
+        { new: true }
+      );
       return res.json({ error: false, reqDenied: DenyFollow });
     }
 
     if (req.body.reqType === "view") {
-      await View.findByIdAndUpdate(req.body.reqId, { isRejected: true });
-      const denied = await View.findById(req.body.reqId);
+      const denied = await View.findByIdAndUpdate(
+        req.body.reqId,
+        { isRejected: true },
+        { new: true }
+      );
       return res.json({ error: false, reqDenied: denied });
     }
+
+    return res.status(400).json({ error: true, message: "Invalid request type" });
   } catch (error) {
-    return res.json({
+    console.error("Deny request error:", error);
+    return res.status(500).json({
       status: 500,
       error: true,
       message: "some error occured",

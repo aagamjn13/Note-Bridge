@@ -1,4 +1,3 @@
-const { ref } = require("firebase/database");
 const mongoose = require("mongoose");
 
 const postUploadSchema = new mongoose.Schema({
@@ -8,31 +7,30 @@ const postUploadSchema = new mongoose.Schema({
   file: {
     type: Object,
   },
-  user:{
+  user: {
     type: mongoose.Schema.Types.ObjectId,
-    ref : "user",
-    require : true
+    ref: "user",
+    required: true,
   },
-  type : {
-    type : String,
-    require : true
+  type: {
+    type: String,
+    required: true,
   },
-  folderPath :{
-    type : String,
-    require : true
+  folderPath: {
+    type: String,
+    required: true,
   },
-  aboutId:{
-    type : mongoose.Schema.Types.ObjectId,
-    ref : "aboutId",
-    require : true
+  aboutId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "socialPostAbout",
+    required: true,
   },
-  date : {
-    type : Date,
-    default : Date.now
-  }
+  date: {
+    type: Date,
+    default: Date.now,
+  },
 });
-
 
 const PostUpload = mongoose.model('socialPost', postUploadSchema);
 
-module.exports = PostUpload
+module.exports = PostUpload;

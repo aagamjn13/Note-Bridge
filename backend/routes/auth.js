@@ -4,7 +4,6 @@ const { body, validationResult } = require("express-validator");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const fetchuser = require("../middlewire/fetchUser");
-// const fileUpload = require("express-fileupload")
 const Note = require("../models/notes");
 const User = require("../models/auth");
 const Post = require("../models/social/postUpload");
@@ -21,7 +20,6 @@ const JWTserect = process.env.JWT_MESSAGE;
 // route-1 : create end point for new user with name , email and password
 router.post(
   "/create",
-  //express validation check
   [
     body("firstName")
       .trim()
@@ -46,7 +44,6 @@ router.post(
 
   async (req, res) => {
     const result = validationResult(req);
-    //check if the inputs are good or not
     if (!result.isEmpty()) {
       return res.status(400).json({
         error: true,
@@ -58,17 +55,17 @@ router.post(
     try {
       const email = req.body.email.trim().toLowerCase();
 
-      //check if a user with the same email already exists
+      // Check if a user with the same email already exists
       let user = await User.findOne({ email });
       if (user) {
         return res.status(409).json({ error: true, message: "An account with this email already exists" });
       }
 
-      //hash the password
+      // Hash the password
       const salt = await bcrypt.genSalt(10);
       const serectPassword = await bcrypt.hash(req.body.password, salt);
 
-      //create new user
+      // Create new user
       user = new User({
         firstName: req.body.firstName.trim(),
         lastName: req.body.lastName.trim(),
@@ -82,7 +79,7 @@ router.post(
 
       await user.save();
 
-      //create json web token for security
+      // Create JSON web token for security
       const jwtToken = jwt.sign({ id: user.id }, JWTserect, { expiresIn: "7d" });
       return res.status(201).json({ jwtToken, userid: user._id });
     } catch (error) {
@@ -95,131 +92,162 @@ router.post(
   }
 );
 
-//route-2 : creat end point to login user with email and password
+// route-2 : create end point to login user with email and password
 router.post(
   "/login",
-  //express valivation check
   [body("password").isLength({ min: 5 }), body("email").isEmail()],
   async (req, res) => {
     const result = validationResult(req);
     if (!result.isEmpty()) {
-      return res.json({ error : result.array() , message : "Too short inputs" });
+      return res.json({ error: result.array(), message: "Too short inputs" });
     }
     try {
-      const user = await User.findOne({ email: req.body.email });//get user if exist
-      if (!user) {//if user does not exist
-        return res.json({ error:true , message : "login with valid credentials" });
+      const email = (req.body.email || "").trim().toLowerCase();
+      const user = await User.findOne({ email });
+      if (!user) {
+        return res.json({ error: true, message: "login with valid credentials" });
       }
-      const check = await bcrypt.compare(req.body.password, user.password);//check password correct or not
+      const check = await bcrypt.compare(req.body.password, user.password);
       if (!check) {
-        return res.json({ error:true , message: "incorrect Password" });
+        return res.json({ error: true, message: "incorrect Password" });
       }
-      await User.findOneAndUpdate({ email: req.body.email } , {lastLogin : Date.now()})
-      let data = {
+      await User.findOneAndUpdate({ _id: user._id }, { lastLogin: Date.now() });
+      const data = {
         id: user.id,
       };
-      const jwtToken = jwt.sign(data, JWTserect);
-      return res.json({ jwtToken , userid : user._id });
+      const jwtToken = jwt.sign(data, JWTserect, { expiresIn: "7d" });
+      return res.json({ jwtToken, userid: user._id });
     } catch (error) {
-       return res.status(500).send("some internal error occured");
+      console.error("Login error:", error);
+      return res.status(500).send("some internal error occured");
     }
   }
 );
 
-//route-3:get users information 
+// route-3: get user's information
 router.post("/getuser", fetchuser, async (req, res) => {
   try {
-    //check is the same user or not
-    if (req.body.user !== req.id) {
-      return res.json({message : "authentication denied" , error : true});
+    if (req.body.user && req.body.user !== req.id) {
+      return res.status(401).json({ message: "authentication denied", error: true });
     }
-    const user = await User.findById(req.body.userId).select("-password")
-    const posts = await Post.find({user : req.body.userId , type : "file"})
-    const about = await About.find({user : req.body.userId})
-    const likes = await Like.find({userId : req.body.userId})
-    const followers = await Follow.find({followingId : req.body.userId , isaccept : true})
-    const pendding = await Follow.find({followingId : req.body.userId , isaccept : false , isRejected : false})
-    const followings = await Follow.find({followerId  :req.body.userId , isaccept : true})
-    const view = await View.find({userId : req.body.userId})
-    const comment = await Comment.find({userId : req.body.userId})
-    comment.reverse()
+    const targetUserId = req.body.userId || req.id;
+    const user = await User.findById(targetUserId).select("-password");
+    if (!user) {
+      return res.json({ error: true, message: "User not found" });
+    }
+    const posts = await Post.find({ user: targetUserId, type: "file" });
+    const about = await About.find({ user: targetUserId });
+    const likes = await Like.find({ userId: targetUserId });
+    const followers = await Follow.find({ followingId: targetUserId, isaccept: true });
+    const pendding = await Follow.find({ followingId: targetUserId, isaccept: false, isRejected: false });
+    const followings = await Follow.find({ followerId: targetUserId, isaccept: true });
+    const view = await View.find({ userId: targetUserId });
+    const comment = await Comment.find({ userId: targetUserId });
+    comment.reverse();
 
-    return res.json({user , error : false , posts ,about, likes ,followers ,followings , view ,comment , pendding})
+    return res.json({
+      user,
+      error: false,
+      posts,
+      about,
+      likes,
+      followers,
+      followings,
+      view,
+      comment,
+      pendding,
+    });
   } catch (error) {
-     return res.status(500).send("some error occured");
+    console.error("Get user error:", error);
+    return res.status(500).send("some error occured");
   }
 });
 
+// route-4: to edit user information
+router.put(
+  "/edit",
+  fetchuser,
+  [
+    body("firstName").isLength({ min: 3 }),
+    body("lastName").isLength({ min: 3 }),
+    body("password").isLength({ min: 5 }),
+    body("email").isEmail(),
+  ],
+  async (req, res) => {
+    const result = validationResult(req);
+    if (!result.isEmpty()) {
+      return res.json({ error: true, message: "Too small inputs" });
+    }
+    if (req.body.user && req.body.user !== req.id) {
+      return res.status(401).json({ message: "authentication denied", error: true });
+    }
 
-//route-4:to edit user information 
-router.put("/edit",fetchuser,
-//express valivation check
-[
-  body("firstName").isLength({ min: 3 }),
-  body("lastName").isLength({ min: 3 }),
-  body("password").isLength({ min: 5 }),
-  body("email").isEmail(),
-],async (req, res) => {
-  const result = validationResult(req);
-  //check is inputs good or not
-  if (!result.isEmpty()) {
-     return res.json({error:true ,  message: "Too small inputs" });
+    try {
+      let user = await User.findById(req.id);
+      if (!user) {
+        return res.json({ error: true, message: "User not found" });
+      }
+      const check = await bcrypt.compare(req.body.password, user.password);
+      if (!check) {
+        return res.json({ error: true, message: "incorrect Password" });
+      }
+      user = await User.findByIdAndUpdate(
+        req.id,
+        {
+          firstName: req.body.firstName,
+          lastName: req.body.lastName,
+          email: req.body.email.trim().toLowerCase(),
+          profileimg: req.body.url,
+          lastUpdate: Date.now(),
+        },
+        { new: true }
+      );
+      return res.json({ message: "Account Update Successfully", user, lastUpdate: Date.now() });
+    } catch (error) {
+      console.error("Edit user error:", error);
+      return res.status(500).send("some error occured");
+    }
   }
-  //check is the same user or not
-  if (req.body.user !== req.id) {
-    return res.json({message : "authentication denied" , error : true});
-  }
+);
 
+// route-5 : check if email exists
+router.put("/email/exist", fetchuser, async (req, res) => {
   try {
-    let user = await User.findById(req.id);
-     if (!user) {//if user does not exist
-      return res.json({ error:true , message : "User not found" });
+    const email = (req.body.email || "").trim().toLowerCase();
+    const useremail = await User.findOne({ _id: req.id, email });
+    const anotheremail = await User.findOne({ email });
+    if (useremail !== null) {
+      return res.json({ exist: false });
+    } else {
+      if (anotheremail === null) {
+        return res.json({ exist: false, message: "new email not present" });
+      } else {
+        return res.json({
+          exist: true,
+          message: "Email with same address already exists... please try with another Email",
+        });
+      }
     }
-    const check = await bcrypt.compare(req.body.password, user.password);//check password correct or not
+  } catch (error) {
+    return res.status(500).send("some error occured");
+  }
+});
+
+// route-6 : check if password is correct for logged-in user
+router.put("/password/exist", fetchuser, async (req, res) => {
+  try {
+    const user = await User.findById(req.id);
+    if (!user) {
+      return res.json({ error: true, message: "User not found" });
+    }
+    const check = await bcrypt.compare(req.body.password, user.password);
     if (!check) {
-      return res.json({ error:true , message: "incorrect Password" });
+      return res.json({ error: true, message: "incorrect Password" });
     }
-     user = await User.findByIdAndUpdate(req.id , {
-      firstName: req.body.firstName,
-      lastName: req.body.lastName,
-      email: req.body.email,
-      profileimg : req.body.url,
-      lastUpdate : Date.now(),
-    })
-     return res.json({message : "Account Update Successfully" , user : user , lastUpdate : Date.now()})
-
-  }catch (error) {
-     return res.status(500).send("some error occured");
+    return res.json({ error: false });
+  } catch (error) {
+    return res.status(500).send("some error occured");
   }
-})
-
-//route-5 : just send res if a particular email exist or not
-router.put("/email/exist",fetchuser,async (req, res) => {
-  const useremail = await User.findOne({_id : req.id , email : req.body.email})
-   const anotheremail = await User.findOne({email : req.body.email})
-   if(useremail !== null ){
-    return res.json({exist : false})
-  }
-  else{
-    if( anotheremail === null){
-       return res.json({exist : false , message : "new email not present"})
-    }else{
-       return res.json({exist : true , message : "Email with same address already exists... please try with another Email"})
-    }
-  }    
-
-  
-})
-
-
-//route-6 : just send res if a password is correct or not for a  particular email 
-router.put("/password/exist",fetchuser,async (req, res) => {
-  const user = await User.findById(req.id)
-  const check = await bcrypt.compare(req.body.password, user.password);
-  if (!check) {
-    return res.json({ error:true , message: "incorrect Password" });
-  }
-  return res.json({error : false})
-})
+});
 
 module.exports = router;

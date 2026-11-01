@@ -2,79 +2,80 @@ const express = require("express");
 const router = express.Router();
 const fetchuser = require("../middlewire/fetchUser");
 const Folder = require("../models/folder");
-const mongoose = require("mongoose");
 const Note = require("../models/notes");
 const deleteFolderRecursive = require("../firebase/deleteFolder");
 require('dotenv').config();
 
-const app = express();
-async function connectToMongo() {
-  await mongoose.connect(`${process.env.MONGODB_URL}`);
-}
+const escapeRegex = (string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-//router for creating a new folder
-router.post("/creat", fetchuser, async (req, res) => {
-  connectToMongo();
+// Handler for creating a new folder (supports both /creat and /create)
+const createFolderHandler = async (req, res) => {
   try {
-    //check is the same user or not
     if (req.body.user !== req.id) {
-      return res.json({ error: true, message: "authentication denied" });
+      return res.status(401).json({ error: true, message: "authentication denied" });
     }
-    //check if folder with same name exist or not
-    let existFolder = await Folder.findOne({
+    const name = (req.body.name || "").trim();
+    if (!name) {
+      return res.status(400).json({ error: true, message: "Folder name is required" });
+    }
+
+    const existFolder = await Folder.findOne({
       user: req.id,
-      name: req.body.name,
+      name,
       folderPath: req.body.folderPath,
     });
     if (existFolder !== null) {
       return res.json({
         error: true,
-        message: `Folder with name : ${req.body.name} already exists  `,
+        message: `Folder with name : ${name} already exists`,
       });
     }
+
     const folder = new Folder({
       user: req.id,
-      name: req.body.name,
+      name,
       folderPath: req.body.folderPath,
     });
     await folder.save();
     return res.json({
       error: false,
-      message: `Folder created successfully with name : ${req.body.name}  `,
+      message: `Folder created successfully with name : ${name}`,
+      folder,
     });
   } catch (error) {
-    //return error if occured
-    return res.json({
+    console.error("Create folder error:", error);
+    return res.status(500).json({
       status: 500,
       error: true,
       message: "some error occured",
     });
   }
-});
+};
 
-// router for fetch folders of a particular user
+router.post("/creat", fetchuser, createFolderHandler);
+router.post("/create", fetchuser, createFolderHandler);
+
+// Router for fetching folders of a particular user
 router.put("/fetch", fetchuser, async (req, res) => {
-  connectToMongo();
   try {
-    //check is the same user or not
     if (req.body.user !== req.id) {
-      return res.json({ error: true, message: "authentication denied" });
+      return res.status(401).json({ error: true, message: "authentication denied" });
     }
     const folders = await Folder.find({
       user: req.id,
       folderPath: req.body.folderPath,
-    }); 
+    });
     if (folders.length !== 0) {
       return res.json({ error: false, folders });
     }
     return res.json({
       error: false,
-      folders,
+      folders: [],
       message: "You have no folder in this section",
     });
   } catch (error) {
-    //return error if occured
-    return res.json({
+    console.error("Fetch folders error:", error);
+    return res.status(500).json({
       status: 500,
       error: true,
       message: "some error occured",
@@ -82,80 +83,41 @@ router.put("/fetch", fetchuser, async (req, res) => {
   }
 });
 
-//router for deleting folders
+// Router for deleting folders
 router.delete("/delete", fetchuser, async (req, res) => {
-  connectToMongo();
   try {
-    //check is the same user or not
     if (req.body.user !== req.id) {
-      return res.json({ error: true, message: "authentication denied" });
+      return res.status(401).json({ error: true, message: "authentication denied" });
     }
 
-    //get folders name from the body id
-    const folderName = [];
-    for (let index = 0; index < req.body.folderId.length; index++) {
-      const folder = await Folder.findById(req.body.folderId[index]);
-      folderName.push(folder.name);
-    }
+    const folderIds = Array.isArray(req.body.folderId) ? req.body.folderId : [];
+    for (let index = 0; index < folderIds.length; index++) {
+      const folder = await Folder.findOne({ user: req.id, _id: folderIds[index] });
+      if (!folder) continue;
 
-    for (let index = 0; index < folderName.length; index++) {
-      const folderPath = `${req.body.folderPath}/${folderName[index]}`;
-      const deletePath = `${req.id}/${req.body.folderPath}/${folderName[index]}`;
-       const response = await deleteFolderRecursive(deletePath);
-      if (response === true) {
-        //delete that selected folder from body by its id
-        await Folder.deleteOne({ user: req.id, _id: req.body.folderId[index] });
+      const folderPath = `${req.body.folderPath}/${folder.name}`.replace(/\/+/g, "/");
+      const deletePath = `${req.id}/${req.body.folderPath}/${folder.name}`.replace(/\/+/g, "/");
 
-        //fetch all folders
-        const allFolder = await Folder.find({ user: req.id }).select(
-          "folderPath"
-        );
-        let selectedFolderId = [];
-        //set folder is which starts with the folder path
-        for (let index = 0; index < allFolder.length; index++) {
-          if (allFolder[index].folderPath.startsWith(folderPath)) {
-            selectedFolderId.push(allFolder[index]._id);
-          }
-        }
-
-        //fetch all files
-        const allFile = await Note.find({ user: req.id });
-        let selectedFileId = [];
-        //set folder is which starts with the folder path
-        for (let index = 0; index < allFile.length; index++) {
-          if (allFile[index].folderPath.startsWith(folderPath)) {
-            selectedFileId.push(allFile[index]._id);
-          }
-        }
-
-        //deleting the selected folders from database
-        for (let index = 0; index < selectedFolderId.length; index++) {
-          await Folder.deleteOne({
-            user: req.id,
-            _id: selectedFolderId[index],
-          });
-        }
-
-        //deleting the selected files from database
-        for (let index = 0; index < selectedFileId.length; index++) {
-          await Note.deleteOne({ user: req.id, _id: selectedFileId[index] });
-        }
-
-        
-      } else {
-        return res.json({
-          status: 500,
-          error: true,
-          message: "some error occured",
-        });
+      // Attempt recursive deletion in Firebase Storage
+      try {
+        await deleteFolderRecursive(deletePath);
+      } catch (fbErr) {
+        console.warn("Firebase folder deletion warning:", fbErr.message);
       }
+
+      // Delete the root folder document
+      await Folder.deleteOne({ user: req.id, _id: folder._id });
+
+      // Delete all subfolders and notes inside this folder tree using regex
+      const subPathRegex = new RegExp(`^${escapeRegex(folderPath)}(/|$)`);
+      await Folder.deleteMany({ user: req.id, folderPath: subPathRegex });
+      await Note.deleteMany({ user: req.id, folderPath: subPathRegex });
     }
 
-    return res.json({ error: false, message: "Selected folder/folders are deeleted Successfully" });
-    
+    return res.json({ error: false, message: "Selected folder/folders are deleted successfully" });
   } catch (error) {
-     //return error if occured
-    return res.json({
+    console.error("Delete folder error:", error);
+    return res.status(500).json({
       status: 500,
       error: true,
       message: "some error occured",

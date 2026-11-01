@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext } from "react";
 import NoteCard from "./noteCard";
 import { Link } from "react-router-dom";
-import io from "socket.io-client";
+import { getSocket } from "../functions/socket";
 import { v4 as uuid } from "uuid";
 import { deleteFileFromFirebase } from "../firebase/deletefile";
 import '../css/userNotes.css'
@@ -18,7 +18,7 @@ import Navbar from './navbar'
 
 const UserNotes = () => {
   const value = useContext(NoteContext);
-  const socket = io(`${value.host}`);
+  const socket = getSocket(value.host);
 
   const [isloaded, setisloaded] = useState(null)
   const [isNavbarVisible, setisNavbarVisible] = useState(false)
@@ -51,7 +51,8 @@ const UserNotes = () => {
 
 
   useEffect(() => {
-    socket.emit("userConnected", `${value.userId}`); //connect to io
+    if (!socket || !value.userId || value.islogout) return;
+    socket.emit("userConnected", `${value.userId}`);
 
     //get accept req status
     socket.on("acceptReq", (data) => {
@@ -79,7 +80,7 @@ const UserNotes = () => {
     socket.on("followReqStatus", (data) => {
       setfollow(!follow);
     });
-  }, [])
+  }, [socket, value.userId, value.islogout])
 
   useEffect(() => {
     value.fetchNotificationToRead()
@@ -446,7 +447,7 @@ const UserNotes = () => {
 
   useEffect(() => {
     window.innerWidth<=625 ? setisNavbarVisible(true) : setisNavbarVisible(false)
-  }, [])
+  }, [socket, value.userId, value.islogout])
   
 
   window.addEventListener('resize' , ()=>{

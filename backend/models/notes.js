@@ -4,18 +4,19 @@ const NoteSchema = new mongoose.Schema({
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "user",
+    required: true,
   },
   originalname: {
     type: String,
-    require: true,
+    required: true,
   },
   tag: {
     type: String,
-    required: true,
+    default: "note",
   },
   type: {
     type: String,
-    require: true,
+    default: "file",
   },
   sizeinbytes: {
     type: Number,
@@ -25,11 +26,7 @@ const NoteSchema = new mongoose.Schema({
   },
   extention: {
     type: String,
-    require: true,
-  },
-  tag: {
-    type: String,
-    default: "note",
+    default: "txt",
   },
   desc: {
     type: String,
@@ -40,11 +37,7 @@ const NoteSchema = new mongoose.Schema({
   },
   folderPath: {
     type: String,
-    require: true,
-  },
-  type: {
-    type: String,
-    default: "file",
+    required: true,
   },
 });
 

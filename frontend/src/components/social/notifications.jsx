@@ -3,7 +3,7 @@ import "../../css/notification.css";
 import NoteContext from "../../context/notes/noteContext";
 import defaultUserImg from "../../assets/defaultUserImg.png";
 import postImg from "../../assets/postImg.jpg";
-import io from "socket.io-client";
+import { getSocket } from "../../functions/socket";
 import RotatingBorder from "../rotatingBorder";
 import ContentLoader from "react-content-loader";
 import { Link } from "react-router-dom";
@@ -11,7 +11,7 @@ import Navbar from "../navbar";
 
 const notifications = () => {
   const value = useContext(NoteContext);
-  const socket = io(`${value.host}`);
+  const socket = getSocket(value.host);
 
   const [allNotification, setallNotification] = useState([]);
   const [tempNotification, settempNotification] = useState([]);
@@ -23,7 +23,8 @@ const notifications = () => {
 
 
   useEffect(() => {
-    socket.emit("userConnected", `${value.userId}`); //connect to io
+    if (!socket || !value.userId || value.islogout) return;
+    socket.emit("userConnected", `${value.userId}`);
     //socket reply of followReqStatus
     socket.on("followReqStatus", (data) => {
       settempdata(data);

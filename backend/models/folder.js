@@ -4,14 +4,15 @@ const folderSchema = new mongoose.Schema({
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "user",
+    required: true,
   },
   name: {
     type: String,
-    require: true,
+    required: true,
   },
   folderPath: {
     type: String,
-    require: true,
+    required: true,
   },
   type: {
     type: String,

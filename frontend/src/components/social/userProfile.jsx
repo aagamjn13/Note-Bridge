@@ -2,7 +2,7 @@ import React, { useState, useContext, useEffect } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
 import NoteContext from "../../context/notes/noteContext";
 import { v4 as uuid } from "uuid";
-import io from "socket.io-client";
+import { getSocket } from "../../functions/socket";
 import LoadingProfile from "../loadingProfile"
 import { FileIcon, defaultStyles } from "react-file-icon";
 import defaultUserImg from "../../assets/defaultUserImg.png";
@@ -17,7 +17,7 @@ const userProfile = () => {
   const { id } = useParams();
   const value = useContext(NoteContext);
   const [userId, setuserId] = useState(id)
-  const socket = io(`${value.host}`);
+  const socket = getSocket(value.host);
 
   const [like, setlike] = useState(false)
   const [view, setview] = useState(false)
@@ -32,7 +32,8 @@ const userProfile = () => {
   const [reqStatus, setreqStatus] = useState([])
 
   useEffect(() => {
-    socket.emit("userConnected", `${value.userId}`); //connect to io
+    if (!socket || !value.userId || value.islogout) return;
+    socket.emit("userConnected", `${value.userId}`);
 
     //socket reply of followReqStatus
     socket.on("postComment", (data) => {

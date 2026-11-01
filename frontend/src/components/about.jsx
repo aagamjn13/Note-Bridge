@@ -1,27 +1,25 @@
 import React, { useEffect, useContext, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import io from "socket.io-client";
+import { getSocket } from "../functions/socket";
 import NoteContext from "../context/notes/noteContext";
-import Navbar from './navbar'
-import Footer from './Footer'
-import '../css/about.css'
+import Navbar from './navbar';
+import Footer from './Footer';
+import '../css/about.css';
 
 const about = () => {
     const location = useLocation();
-
     const value = useContext(NoteContext);
-    const socket = io(`${value.host}`);
+    const socket = getSocket(value.host);
 
-
-    const [like, setlike] = useState(false)
-    const [view, setview] = useState(false)
-    const [follow, setfollow] = useState(false)
-    const [comments, setcomments] = useState([])
-    const [isNavbaeShow, setisNavbaeShow] = useState(false)
+    const [like, setlike] = useState(false);
+    const [view, setview] = useState(false);
+    const [follow, setfollow] = useState(false);
+    const [comments, setcomments] = useState([]);
+    const [isNavbaeShow, setisNavbaeShow] = useState(false);
     const [originalUser, setoriginalUser] = useState(null);
 
     const getOriUser = async () => {
-        if(!value.authtoken || !value.userId) return;
+        if (!value.authtoken || !value.userId) return;
         try {
             const res = await fetch(`${value.host}/api/auth/getuser`, {
                 method: "POST",
@@ -38,7 +36,7 @@ const about = () => {
             if (!data.error) {
                 setoriginalUser(data.user);
             }
-        } catch(e) {}
+        } catch (e) {}
     };
 
     useEffect(() => {
@@ -46,53 +44,55 @@ const about = () => {
     }, [value.authtoken]);
 
     useEffect(() => {
-        socket.emit("userConnected", `${value.userId}`); //connect to io
+        if (!socket || !value.userId || value.islogout) return;
 
-        //get accept req status
-        socket.on("acceptReq", (data) => {
-            setfollow(!follow);
-        });
-        //socket reply of followReqStatus
-        socket.on("postComment", (data) => {
-            setcomments(data)
-        });
-        //get accept req status
-        socket.on("denyReq", (data) => {
-            setfollow(!follow);
-        });
-        //socket reply for likes
-        socket.on("postLike", (data) => {
-            setlike(!like)
-        });
+        socket.emit("userConnected", `${value.userId}`);
 
-        //socket reply of view request status
-        socket.on("viewReq", (data) => {
-            setview(!view);
-        });
+        const handleAcceptReq = () => setfollow(prev => !prev);
+        const handlePostComment = (data) => setcomments(data);
+        const handleDenyReq = () => setfollow(prev => !prev);
+        const handlePostLike = () => setlike(prev => !prev);
+        const handleViewReq = () => setview(prev => !prev);
+        const handleFollowReqStatus = () => setfollow(prev => !prev);
 
-        //socket reply of followReqStatus
-        socket.on("followReqStatus", (data) => {
-            setfollow(!follow);
-        });
-    }, [])
+        socket.on("acceptReq", handleAcceptReq);
+        socket.on("postComment", handlePostComment);
+        socket.on("denyReq", handleDenyReq);
+        socket.on("postLike", handlePostLike);
+        socket.on("viewReq", handleViewReq);
+        socket.on("followReqStatus", handleFollowReqStatus);
+
+        return () => {
+            socket.off("acceptReq", handleAcceptReq);
+            socket.off("postComment", handlePostComment);
+            socket.off("denyReq", handleDenyReq);
+            socket.off("postLike", handlePostLike);
+            socket.off("viewReq", handleViewReq);
+            socket.off("followReqStatus", handleFollowReqStatus);
+        };
+    }, [socket, value.userId, value.islogout]);
 
     useEffect(() => {
-        value.fetchNotificationToRead()
-    }, [follow, comments, like, view])
+        if (value.fetchNotificationToRead) {
+            value.fetchNotificationToRead();
+        }
+    }, [follow, comments, like, view]);
 
     useEffect(() => {
-        window.innerWidth <= 625 ? setisNavbaeShow(true) : setisNavbaeShow(false)
-    }, [])
+        window.innerWidth <= 625 ? setisNavbaeShow(true) : setisNavbaeShow(false);
+    }, []);
 
-    window.addEventListener('resize', () => {
-        window.innerWidth <= 625 ? setisNavbaeShow(true) : setisNavbaeShow(false)
-    })
+    useEffect(() => {
+        const handleResize = () => {
+            window.innerWidth <= 625 ? setisNavbaeShow(true) : setisNavbaeShow(false);
+        };
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
 
     return (
         <>
-
             <div className="container-fluid h-100 position-relative" id="about">
-
                 <div className="position-absolute w-100 top-0 z-3">
                     <Navbar search={() => { }} />
                 </div>
@@ -143,7 +143,7 @@ const about = () => {
                                     
                                     <div className="d-flex justify-content-center gap-3">
                                         <a href="https://github.com/aagamjn13" target="_blank" rel="noreferrer" className="btn btn-outline-secondary rounded-circle d-flex align-items-center justify-content-center" style={{width: "45px", height:"45px", borderColor: 'var(--border-color)', color: 'var(--text-primary)'}}><i className="fa-brands fa-github fs-5"></i></a>
-                                        <a href="#" className="btn btn-outline-secondary rounded-circle d-flex align-items-center justify-content-center" style={{width: "45px", height:"45px", borderColor: 'var(--border-color)', color: 'var(--text-primary)'}}><i className="fa-brands fa-linkedin-in fs-5"></i></a>
+                                        <a href="https://www.linkedin.com/in/aagam-jain-10226831a/" target="_blank" rel="noreferrer" className="btn btn-outline-secondary rounded-circle d-flex align-items-center justify-content-center" style={{width: "45px", height:"45px", borderColor: 'var(--border-color)', color: 'var(--text-primary)'}}><i className="fa-brands fa-linkedin-in fs-5"></i></a>
                                         <a href="mailto:aagamjn13@gmail.com" className="btn btn-outline-secondary rounded-circle d-flex align-items-center justify-content-center" style={{width: "45px", height:"45px", borderColor: 'var(--border-color)', color: 'var(--text-primary)'}}><i className="fa-solid fa-envelope fs-5"></i></a>
                                     </div>
                                 </div>
@@ -154,8 +154,7 @@ const about = () => {
                 <Footer />
             </div>
         </>
-
     );
-}
+};
 
 export default about;

@@ -7,7 +7,7 @@ import { FileIcon, defaultStyles } from "react-file-icon";
 import defaultUserImg from "../../assets/defaultUserImg.png";
 import "../../css/glowBtn.css";
 import '../../css/post.css'
-import io from "socket.io-client";
+import { getSocket } from "../../functions/socket";
 import RotatingBorder from "../rotatingBorder";
 import LoginModal from "../modals/loginModal";
 import Navbar from "../navbar";
@@ -22,7 +22,7 @@ const post = () => {
   const location = useLocation();
   const { id } = useParams();
   const value = useContext(NoteContext);
-  const socket = io(`${value.host}`);
+  const socket = getSocket(value.host);
 
   const [reqStatus, setreqStatus] = useState([])
   const [comments, setcomments] = useState([])
@@ -34,7 +34,8 @@ const post = () => {
   const [postSummaries, setPostSummaries] = useState({})
   const [loadingSummaries, setLoadingSummaries] = useState({})
   useEffect(() => {
-    socket.emit("userConnected", `${value.userId}`); //connect to io
+    if (!socket || !value.userId || value.islogout) return;
+    socket.emit("userConnected", `${value.userId}`);
 
     //check connected or not 
     socket.on("userConnected", (data) => {
