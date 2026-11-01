@@ -1,1 +1,6 @@
 backend/firebase/serviceAccountKey.json
+
+# environment files
+.env
+.env.local
+.env.*.local

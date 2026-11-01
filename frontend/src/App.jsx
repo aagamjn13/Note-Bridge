@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import UserNotes from "./components/userNotes";
-import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import { createHashRouter, RouterProvider } from "react-router-dom";
 import NoteContext from "./context/notes/noteContext";
 import LoginForm from "./components/inputForms/loginForm";
 import SignupForm from "./components/inputForms/signupForm";
@@ -30,9 +30,9 @@ function App() {
 
   const [aboutPost, setaboutPost] = useState([])
 
-  const host = import.meta.env.VITE_REACT_HOST || "";
-  const authtoken = localStorage.getItem("authtoken");
-  const userId = localStorage.getItem("userId");
+  const host = (import.meta.env.VITE_REACT_HOST || "").replace(/\/+$/, "");
+  const [authtoken, setauthtoken] = useState(() => localStorage.getItem("authtoken"));
+  const [userId, setuserId] = useState(() => localStorage.getItem("userId"));
   const [unReadNotificationLength, setunReadNotificationLength] = useState(0)
   const [urlPath, seturlPath] = useState("")
 
@@ -94,7 +94,7 @@ function App() {
   })
 
 
-  const router = createBrowserRouter([
+  const router = useMemo(() => createHashRouter([
     {
       path: "/",
       element: <LandingPage />,
@@ -205,7 +205,7 @@ function App() {
         </div>
       ),
     },
-  ]);
+  ]), []);
 
   return (
     <>
@@ -222,7 +222,9 @@ function App() {
           isSelect,
           host,
           authtoken,
+          setauthtoken,
           userId,
+          setuserId,
         }}
       >
         <RouterProvider router={router} />

@@ -1,12 +1,10 @@
 const express = require("express");
-const mongoose = require("mongoose");
 const router = express.Router();
 const { body, validationResult } = require("express-validator");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const fetchuser = require("../middlewire/fetchUser");
 // const fileUpload = require("express-fileupload")
-const multer = require("multer");
 const Note = require("../models/notes");
 const User = require("../models/auth");
 const Post = require("../models/social/postUpload");
@@ -20,70 +18,79 @@ require('dotenv').config();
 
 const JWTserect = process.env.JWT_MESSAGE;
 
-
-async function connectToMongo() {
-  await mongoose.connect(`${process.env.MONGODB_URL}`);
-}
-
-
-const app = express();
-
-//multer middlewire
-const upload = multer({
-  storage : multer.diskStorage({}),
-})
-
-// route-1 : creat end point for new user with name , email and password
+// route-1 : create end point for new user with name , email and password
 router.post(
   "/create",
-  upload.array("file"),
-  //express valivation check
+  //express validation check
   [
-    body("firstName").isLength({ min: 3 }),
-    body("lastName").isLength({ min: 3 }),
-    body("password").isLength({ min: 5 }),
-    body("about").isLength({ min: 5 }),
-    body("email").isEmail(),
+    body("firstName")
+      .trim()
+      .isLength({ min: 3 })
+      .withMessage("First name must be at least 3 characters"),
+    body("lastName")
+      .trim()
+      .isLength({ min: 3 })
+      .withMessage("Last name must be at least 3 characters"),
+    body("password")
+      .isLength({ min: 5 })
+      .withMessage("Password must be at least 5 characters"),
+    body("about")
+      .trim()
+      .isLength({ min: 5 })
+      .withMessage("About must be at least 5 characters"),
+    body("email")
+      .trim()
+      .isEmail()
+      .withMessage("Enter a valid email address"),
   ],
-  
+
   async (req, res) => {
-    //connect to mongodb
-    connectToMongo()
     const result = validationResult(req);
-    //check is inputs good or not
+    //check if the inputs are good or not
     if (!result.isEmpty()) {
-       return res.json({error:true ,  message: result.array() });
+      return res.status(400).json({
+        error: true,
+        message: result.array().map((item) => item.msg).join(", "),
+        errors: result.array().map((item) => ({ field: item.path, message: item.msg })),
+      });
     }
+
     try {
-      //check user with same email present or not
-      let user = await User.findOne({ email: req.body.email });
+      const email = req.body.email.trim().toLowerCase();
+
+      //check if a user with the same email already exists
+      let user = await User.findOne({ email });
       if (user) {
-        return res.json({ error:true , message: "email already is use" });
+        return res.status(409).json({ error: true, message: "An account with this email already exists" });
       }
-     
-      //make password hashing and salt
+
+      //hash the password
       const salt = await bcrypt.genSalt(10);
       const serectPassword = await bcrypt.hash(req.body.password, salt);
-      //creat new user
+
+      //create new user
       user = new User({
-        firstName: req.body.firstName,
-        lastName: req.body.lastName,
+        firstName: req.body.firstName.trim(),
+        lastName: req.body.lastName.trim(),
         password: serectPassword,
-        email: req.body.email,
-        profileimg : req.body.url,
-        creatDate : Date.now(),
-        lastLogin : Date.now(),
-        about:req.body.about
+        email,
+        profileimg: req.body.url && req.body.url !== "undefined" ? req.body.url : "",
+        creatDate: Date.now(),
+        lastLogin: Date.now(),
+        about: req.body.about.trim(),
       });
-       user.save();
-      //creat json webtoken for sequrity
-      let data = {
-        id: user.id,
-      };
-      const jwtToken = jwt.sign(data, JWTserect);
-      return res.json({ jwtToken , userid : user._id });
+
+      await user.save();
+
+      //create json web token for security
+      const jwtToken = jwt.sign({ id: user.id }, JWTserect, { expiresIn: "7d" });
+      return res.status(201).json({ jwtToken, userid: user._id });
     } catch (error) {
-       return res.status(500).send("some error occured");
+      console.error("Signup failed:", error);
+      if (error.code === 11000) {
+        return res.status(409).json({ error: true, message: "An account with this email already exists" });
+      }
+      return res.status(500).json({ error: true, message: "Could not create your account. Please try again." });
     }
   }
 );
@@ -94,7 +101,6 @@ router.post(
   //express valivation check
   [body("password").isLength({ min: 5 }), body("email").isEmail()],
   async (req, res) => {
-    connectToMongo()
     const result = validationResult(req);
     if (!result.isEmpty()) {
       return res.json({ error : result.array() , message : "Too short inputs" });
@@ -123,8 +129,6 @@ router.post(
 //route-3:get users information 
 router.post("/getuser", fetchuser, async (req, res) => {
   try {
-    //connect to mmongodb
-    connectToMongo()
     //check is the same user or not
     if (req.body.user !== req.id) {
       return res.json({message : "authentication denied" , error : true});
@@ -156,8 +160,6 @@ router.put("/edit",fetchuser,
   body("password").isLength({ min: 5 }),
   body("email").isEmail(),
 ],async (req, res) => {
-  //connect to mongodb
-  connectToMongo()
   const result = validationResult(req);
   //check is inputs good or not
   if (!result.isEmpty()) {
@@ -193,8 +195,6 @@ router.put("/edit",fetchuser,
 
 //route-5 : just send res if a particular email exist or not
 router.put("/email/exist",fetchuser,async (req, res) => {
-  //connect to mongodb
-  connectToMongo()
   const useremail = await User.findOne({_id : req.id , email : req.body.email})
    const anotheremail = await User.findOne({email : req.body.email})
    if(useremail !== null ){
@@ -214,8 +214,6 @@ router.put("/email/exist",fetchuser,async (req, res) => {
 
 //route-6 : just send res if a password is correct or not for a  particular email 
 router.put("/password/exist",fetchuser,async (req, res) => {
-  //connect to mongodb
-  connectToMongo()
   const user = await User.findById(req.id)
   const check = await bcrypt.compare(req.body.password, user.password);
   if (!check) {

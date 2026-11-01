@@ -50,7 +50,6 @@ app.use('/api/ai', AI);
 // Users object to store all users' socket IDs with their user IDs
 const users = {};
 io.on('connection', (socket) => {
-  connectToMongo()
   // Connect user and save his user ID and socket ID
   socket.on("userConnected", (userId) => {
     users[userId] = socket.id;
@@ -131,6 +130,15 @@ app.get('/', (req, res) => {
 });
 
 const port = process.env.PORT || 3000;
-server.listen(port, () => {
-  console.log(`Example app listening on port ${port}`);
+
+async function start() {
+  await connectToMongo();
+  server.listen(port, () => {
+    console.log(`Example app listening on port ${port}`);
+  });
+}
+
+start().catch((error) => {
+  console.error("Failed to connect to MongoDB:", error.message);
+  process.exit(1);
 });
